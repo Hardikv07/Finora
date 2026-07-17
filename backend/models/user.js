@@ -20,8 +20,15 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-
-
+    role: {
+        type: String,
+        enum: ["user", "admin"],
+        default: "user"
+    },
+    isBlocked: {
+        type: Boolean,
+        default: false
+    },
     // 1. Refresh Tokens (Allow multiple devices)
     refreshTokens: [{
         token: { type: String },
