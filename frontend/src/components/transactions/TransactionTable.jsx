@@ -5,9 +5,31 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import Card from '../common/Card';
 
 /**
+ * Highlights occurrences of `query` inside `text` with a yellow <mark>
+ */
+const Highlight = ({ text, query }) => {
+  if (!query || !text) return <>{text}</>;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = String(text).split(new RegExp(`(${escaped})`, 'gi'));
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark key={i} className="bg-yellow-200 text-yellow-900 rounded px-0.5 not-italic">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+};
+
+/**
  * Full-featured Transaction Table with sorting and actions
  */
-const TransactionTable = ({ transactions = [], onDelete, onEdit }) => {
+const TransactionTable = ({ transactions = [], onDelete, onEdit, searchQuery = '' }) => {
   const { selectedCurrency } = useFinanceData();
   const [sortField, setSortField] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -79,7 +101,8 @@ const TransactionTable = ({ transactions = [], onDelete, onEdit }) => {
               </tr>
             ) : (
               sortedTransactions.map((tx) => {
-                const isIncome = tx.type === 'income';
+                // Normalize type comparison — backend sends 'INCOME'/'EXPENSE', dummy data uses lowercase
+                const isIncome = tx.type?.toLowerCase() === 'income';
                 const tags = Array.isArray(tx.tags) ? tx.tags : [];
 
                 return (
@@ -99,10 +122,16 @@ const TransactionTable = ({ transactions = [], onDelete, onEdit }) => {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-slate-900 truncate block max-w-[180px]">
-                              {tx.merchant || 'General Entry'}
+                              <Highlight text={tx.merchant || 'General Entry'} query={searchQuery} />
                             </span>
                             {tx.hasReceipt && (
-                              <Receipt className="w-3.5 h-3.5 text-indigo-500 shrink-0" title="Receipt Uploaded" />
+                              tx.receiptUrl ? (
+                                <a href={tx.receiptUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 group-hover:scale-110 transition-transform" title="View Uploaded Receipt">
+                                  <Receipt className="w-3.5 h-3.5 text-indigo-500 hover:text-indigo-600 transition-colors" />
+                                </a>
+                              ) : (
+                                <Receipt className="w-3.5 h-3.5 text-indigo-500 shrink-0" title="Receipt Attached (Offline)" />
+                              )
                             )}
                           </div>
                           <span className="text-xs text-slate-400 font-medium">{formatDate(tx.date)}</span>
@@ -113,14 +142,18 @@ const TransactionTable = ({ transactions = [], onDelete, onEdit }) => {
                     {/* Category */}
                     <td className="py-4 px-4">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
-                        {tx.category || 'Other'}
+                        <Highlight text={tx.category || 'Other'} query={searchQuery} />
                       </span>
                     </td>
 
                     {/* Payment Method */}
                     <td className="py-4 px-4 text-xs font-medium text-slate-600">
                       <div>{tx.paymentMethod || 'Digital Wallet'}</div>
-                      {tx.notes && <div className="text-[11px] text-slate-400 truncate max-w-[140px]">{tx.notes}</div>}
+                      {tx.notes && (
+                        <div className="text-[11px] text-slate-400 truncate max-w-[140px]">
+                          <Highlight text={tx.notes} query={searchQuery} />
+                        </div>
+                      )}
                     </td>
 
                     {/* Tags */}
@@ -132,8 +165,8 @@ const TransactionTable = ({ transactions = [], onDelete, onEdit }) => {
                               key={i}
                               className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100"
                             >
-                              <Tag className="w-2.5 h-2.5" />
-                              {t}
+                              <Tag className="w-2.5 h-2.5 shrink-0" />
+                              <Highlight text={t} query={searchQuery} />
                             </span>
                           ))
                         ) : (

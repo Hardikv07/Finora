@@ -19,8 +19,13 @@ const app = require("./backend/app")
 dotenv.config()
 db()
 
+// Initialize background cron jobs
+require("./backend/services/cronJobs");
+
+// Initialize Search Tries
+const searchService = require("./backend/services/searchService");
+searchService.loadAllTries();
 
 app.listen(process.env.PORT || 7777, ()=> {
     console.log(`Server is running on port:  ${process.env.PORT}`)  
 })
-

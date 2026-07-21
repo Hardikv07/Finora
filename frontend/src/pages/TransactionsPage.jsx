@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Filter, Download, FileUp } from 'lucide-react';
+import { Plus, Filter, Download, FileUp, Search, X } from 'lucide-react';
 import { useFinanceData } from '../hooks/useFinanceData';
 import { useDebounce } from '../hooks/useDebounce';
-import SearchBar from '../components/common/SearchBar';
 import Button from '../components/common/Button';
 import Pagination from '../components/common/Pagination';
 import TransactionTable from '../components/transactions/TransactionTable';
@@ -25,32 +24,39 @@ const TransactionsPage = () => {
 
   const debouncedQuery = useDebounce(searchQuery, 250);
 
-  // Extract all unique categories
+  // Extract unique categories — scoped to the active type filter so dropdown stays relevant
   const allCategories = useMemo(() => {
-    const cats = new Set(transactions.map((t) => t.category).filter(Boolean));
-    return ['all', ...Array.from(cats)];
-  }, [transactions]);
+    const source = filterType === 'all'
+      ? transactions
+      : transactions.filter((t) => t.type?.toLowerCase() === filterType);
+    const cats = new Set(source.map((t) => t.category).filter(Boolean));
+    return ['all', ...Array.from(cats).sort()];
+  }, [transactions, filterType]);
 
   // Filter & Search Logic
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
-      // Type matching
-      if (filterType !== 'all' && tx.type !== filterType) return false;
+      // Type matching — normalize to lowercase to handle both 'income' and 'INCOME'
+      const txType = tx.type?.toLowerCase();
+      if (filterType !== 'all' && txType !== filterType) return false;
 
-      // Category matching
-      if (filterCategory !== 'all' && tx.category !== filterCategory) return false;
+      // Category matching (case-insensitive)
+      if (filterCategory !== 'all' && tx.category?.toLowerCase() !== filterCategory.toLowerCase()) return false;
 
-      // Search matching (merchant, category, notes, tags)
+      // Search matching (merchant, category, notes, tags, amount)
       if (debouncedQuery) {
-        const query = debouncedQuery.toLowerCase();
+        const query = debouncedQuery.toLowerCase().trim();
         const matchMerchant = tx.merchant?.toLowerCase().includes(query);
         const matchCategory = tx.category?.toLowerCase().includes(query);
         const matchNotes = tx.notes?.toLowerCase().includes(query);
+        // Only match amount when query is purely numeric to avoid false positives (e.g. "1" matching everything)
+        const isNumericQuery = /^\d+(\.\d+)?$/.test(query);
+        const matchAmount = isNumericQuery && tx.amount?.toString() === query;
         const matchTags = Array.isArray(tx.tags)
           ? tx.tags.some((t) => t.toLowerCase().includes(query))
           : false;
 
-        return matchMerchant || matchCategory || matchNotes || matchTags;
+        return matchMerchant || matchCategory || matchNotes || matchTags || matchAmount;
       }
 
       return true;
@@ -111,26 +117,50 @@ const TransactionsPage = () => {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="glass-card rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="relative z-10 bg-white border border-slate-200/80 shadow-card rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="w-full md:w-80">
-          <SearchBar
-            value={searchQuery}
-            onChange={(val) => {
-              setSearchQuery(val);
-              setCurrentPage(1);
-            }}
-            placeholder="Search merchants, categories, or tags..."
-          />
+          <div className="relative flex items-center w-full">
+            <Search className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none z-10" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Search merchants, categories, tags, amounts..."
+              autoComplete="off"
+              className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 focus:bg-white transition-all shadow-sm"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors z-10"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Type & Category Filter Chips */}
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+          {/* Result count badge */}
+          {(debouncedQuery || filterType !== 'all' || filterCategory !== 'all') && (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+              {filteredTransactions.length} result{filteredTransactions.length !== 1 ? 's' : ''}
+            </span>
+          )}
+
           <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
             {['all', 'income', 'expense'].map((t) => (
               <button
                 key={t}
                 onClick={() => {
                   setFilterType(t);
+                  setFilterCategory('all'); // BUG-05 fix: reset category when type changes
                   setCurrentPage(1);
                 }}
                 className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
@@ -160,6 +190,16 @@ const TransactionsPage = () => {
               ))}
             </select>
           </div>
+
+          {/* Clear all filters button */}
+          {(debouncedQuery || filterType !== 'all' || filterCategory !== 'all') && (
+            <button
+              onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterCategory('all'); setCurrentPage(1); }}
+              className="text-xs font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors border border-rose-100"
+            >
+              Clear all
+            </button>
+          )}
         </div>
       </div>
 
@@ -169,6 +209,7 @@ const TransactionsPage = () => {
           transactions={paginatedTransactions}
           onDelete={deleteTransaction}
           onEdit={handleOpenEdit}
+          searchQuery={debouncedQuery}
         />
         <Pagination
           currentPage={currentPage}

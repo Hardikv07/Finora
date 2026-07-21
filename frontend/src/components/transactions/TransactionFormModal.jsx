@@ -20,7 +20,8 @@ const TransactionFormModal = ({ isOpen, onClose, initialData = null }) => {
     date: new Date().toISOString().split('T')[0],
     notes: '',
     tags: '',
-    hasReceipt: false
+    hasReceipt: false,
+    receiptUrl: null,
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,7 +39,8 @@ const TransactionFormModal = ({ isOpen, onClose, initialData = null }) => {
         date: initialData.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         notes: initialData.notes || '',
         tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : initialData.tags || '',
-        hasReceipt: Boolean(initialData.hasReceipt)
+        hasReceipt: Boolean(initialData.hasReceipt),
+        receiptUrl: initialData.receiptUrl || null,
       });
     } else {
       setFormData({
@@ -51,7 +53,8 @@ const TransactionFormModal = ({ isOpen, onClose, initialData = null }) => {
         date: new Date().toISOString().split('T')[0],
         notes: '',
         tags: '',
-        hasReceipt: false
+        hasReceipt: false,
+        receiptUrl: null,
       });
     }
     setErrors({});
@@ -266,19 +269,39 @@ const TransactionFormModal = ({ isOpen, onClose, initialData = null }) => {
           />
         </div>
 
-        {/* Receipt Attachment Checkbox */}
-        <div className="flex items-center gap-2 pt-1">
-          <input
-            type="checkbox"
-            id="hasReceipt"
-            name="hasReceipt"
-            checked={formData.hasReceipt}
-            onChange={handleChange}
-            className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-          />
-          <label htmlFor="hasReceipt" className="text-xs font-semibold text-slate-700 cursor-pointer">
-            Mark receipt invoice as uploaded / attached to this transaction
-          </label>
+        {/* Receipt Attachment UI */}
+        <div className="pt-2">
+          {formData.receiptUrl ? (
+            <div className="flex items-center gap-4 p-3 rounded-xl border border-slate-200 bg-slate-50">
+              <a href={formData.receiptUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 relative group rounded-lg overflow-hidden border border-slate-200 block w-16 h-16 bg-white">
+                <img src={formData.receiptUrl} alt="Bill Receipt" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-[10px] font-bold">VIEW</span>
+                </div>
+              </a>
+              <div>
+                <p className="text-sm font-bold text-slate-800">Attached Bill / Receipt</p>
+                <p className="text-xs text-slate-500">This transaction has an uploaded image.</p>
+                <a href={formData.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 mt-1 inline-block">
+                  Open full image &rarr;
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="hasReceipt"
+                name="hasReceipt"
+                checked={formData.hasReceipt}
+                onChange={handleChange}
+                className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+              />
+              <label htmlFor="hasReceipt" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                Mark receipt invoice as uploaded / attached to this transaction (Offline)
+              </label>
+            </div>
+          )}
         </div>
 
         {/* Footer Actions */}

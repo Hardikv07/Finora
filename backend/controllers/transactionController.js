@@ -4,6 +4,7 @@ const { recalculateWalletBalance } = require("../services/walletService");
 const { cloudinary } = require("../middleware/uploadmiddleware");
 const { evaluateBudgetAlerts } = require("../utils/budgetEvaluation");
 const { processGoalAutoContributions } = require("../utils/goalEvaluation");
+const searchService = require("../services/searchService");
  
 /**
  * @desc    Create new Income or Expense transaction with optional receipt URL
@@ -54,6 +55,9 @@ const createTransaction = async (req, res) => {
             goalContributions = await processGoalAutoContributions(req.user._id, transaction.amount);
         }
  
+        // Update Search Trie
+        await searchService.addTransaction(req.user._id, transaction);
+
         return res.status(201).json({
             message: "Transaction created successfully and wallet balance synced!",
             transaction,
@@ -72,7 +76,7 @@ const createTransaction = async (req, res) => {
  */
 const getTransactions = async (req, res) => {
     try {
-        const { wallet, type, category, startDate, endDate, page = 1, limit = 20 } = req.query;
+        const { wallet, type, category, startDate, endDate, search, page = 1, limit = 20 } = req.query;
         const query = { user: req.user._id };
  
         if (wallet) query.wallet = wallet;
@@ -82,6 +86,17 @@ const getTransactions = async (req, res) => {
             query.date = {};
             if (startDate) query.date.$gte = new Date(startDate);
             if (endDate) query.date.$lte = new Date(endDate);
+        }
+
+        // Full-text style search across merchant, notes, category, and tags
+        if (search && search.trim()) {
+            const regex = new RegExp(search.trim(), 'i');
+            query.$or = [
+                { merchant: regex },
+                { notes: regex },
+                { category: regex },
+                { tags: regex }
+            ];
         }
  
         const transactions = await Transaction.find(query)
@@ -123,10 +138,16 @@ const updateTransaction = async (req, res) => {
             await cloudinary.uploader.destroy(transaction.receiptPublicId).catch(err => console.error("Cloudinary delete error:", err));
         }
  
+        // Keep a copy of the old transaction for trie updating
+        const oldTransaction = transaction.toObject();
+
         // Update fields
         Object.assign(transaction, req.body);
         if (req.body.amount) transaction.amount = Number(req.body.amount);
         await transaction.save();
+ 
+        // Update Search Trie
+        await searchService.updateTransaction(req.user._id, oldTransaction, transaction);
  
         // Recalculate balances for old wallet AND new wallet (if wallet was changed during edit)
         await recalculateWalletBalance(oldWalletId);
@@ -164,6 +185,9 @@ const deleteTransaction = async (req, res) => {
         // Or run explicit recalculation:
         // await recalculateWalletBalance(transaction.wallet);
  
+        // Update Search Trie
+        await searchService.removeTransaction(req.user._id, transaction);
+ 
         return res.status(200).json({
             message: "Transaction deleted, receipt removed from CDN, and wallet balance reverted accurately."
         });
@@ -172,9 +196,89 @@ const deleteTransaction = async (req, res) => {
     }
 };
  
+/**
+ * @desc    Parse a bill image/PDF and return extracted structured data
+ * @route   POST /api/transactions/parse-bill
+ * @access  Private
+ */
+const parseBillFromUpload = async (req, res) => {
+    try {
+        // The file has been uploaded to Cloudinary via handleReceiptUpload middleware
+        // req.body.receiptUrl and req.body.receiptPublicId are now available
+        const { receiptUrl, receiptPublicId } = req.body;
+
+        if (!receiptUrl && !req.file) {
+            return res.status(400).json({ message: "No file uploaded." });
+        }
+
+        // Use the original filename for regex-based extraction
+        const filename = req.file?.originalname || '';
+
+        // Build a text string to extract from (filename + URL path)
+        const combined = `${filename} ${receiptUrl || ''}`;
+
+        // Amount patterns
+        let amount = null;
+        const amountPatterns = [
+            /(?:total|amount|grand\s*total|net\s*(?:amount|payable))[:\s]*[\u20B9$€£]?\s*([\d,]+\.?\d*)/i,
+            /[\u20B9$€£]\s*([\d,]+\.?\d*)/,
+            /(?:Rs\.?|INR|USD)\s*([\d,]+\.?\d*)/i,
+        ];
+        for (const p of amountPatterns) {
+            const m = combined.match(p);
+            if (m) { amount = m[1].replace(/,/g, ''); break; }
+        }
+
+        // Date patterns
+        let date = null;
+        const datePatterns = [
+            /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/,
+            /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/,
+        ];
+        for (const p of datePatterns) {
+            const m = combined.match(p);
+            if (m) {
+                const parsed = new Date(m[0]);
+                if (!isNaN(parsed.getTime())) date = parsed.toISOString().split('T')[0];
+                break;
+            }
+        }
+
+        // Category detection
+        const categoryKeywords = {
+            'Utilities & Bills': ['electricity', 'water', 'gas', 'internet', 'broadband', 'mobile', 'bill'],
+            'Food & Dining':     ['restaurant', 'food', 'cafe', 'dining', 'swiggy', 'zomato'],
+            'Shopping':          ['amazon', 'flipkart', 'shop', 'store'],
+            'Transportation':    ['uber', 'ola', 'fuel', 'petrol', 'cab'],
+            'Healthcare & Fitness': ['hospital', 'pharmacy', 'medical', 'doctor', 'clinic'],
+            'Entertainment':     ['netflix', 'spotify', 'subscription'],
+            'Housing & Rent':    ['rent', 'lease', 'maintenance'],
+        };
+
+        const lowerCombined = combined.toLowerCase();
+        let category = 'Other Expense';
+        for (const [cat, kws] of Object.entries(categoryKeywords)) {
+            if (kws.some(kw => lowerCombined.includes(kw))) { category = cat; break; }
+        }
+
+        // Merchant (filename without extension, cleaned up)
+        const merchantRaw = filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+        const merchant = merchantRaw.trim().substring(0, 60) || null;
+
+        return res.status(200).json({
+            extracted: { amount, date, category, merchant },
+            receiptUrl: receiptUrl || null,
+            receiptPublicId: receiptPublicId || null,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: "Failed to parse bill.", error: error.message });
+    }
+};
+
 module.exports = {
     createTransaction,
     getTransactions,
     updateTransaction,
-    deleteTransaction
+    deleteTransaction,
+    parseBillFromUpload
 };

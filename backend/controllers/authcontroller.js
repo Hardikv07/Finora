@@ -2,9 +2,10 @@ const User = require("../models/user");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendemail");
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const generateToken = (id) => {
-
     return jwt.sign(
         { id },
         process.env.JWT_SECRET,
@@ -12,7 +13,6 @@ const generateToken = (id) => {
             expiresIn: process.env.JWT_EXPIRE
         }
     );
-
 }
 
 const registerUser = async (req, res) => {
@@ -34,7 +34,6 @@ const registerUser = async (req, res) => {
         res.status(201).json({ message: "User registered successfully" });
     } catch (error) {
         console.error(error);
-
         res.status(500).json({
             message: "Error registering user",
             error: error.message,
@@ -42,8 +41,6 @@ const registerUser = async (req, res) => {
         });
     }
 };
-
-
 
 const login = async (req, res) => {
     try {
@@ -65,7 +62,6 @@ const login = async (req, res) => {
         }
 
         const isMatch = await user.comparePassword(password);
-        console.log("Password match:", isMatch);
         if (!isMatch) {
             return res.status(400).json({
                 message: "Invalid credentials"
@@ -89,19 +85,16 @@ const login = async (req, res) => {
         await user.save({ validateBeforeSave: false });
 
         // Set cookies for both tokens
-        res.cookie("token", token, {
+        const cookieOptions = {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 15 * 60 * 1000 // 15 mins
-        });
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+        };
 
-        res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        }).status(200).json({
+        res.cookie("token", token, { ...cookieOptions, maxAge: 15 * 60 * 1000 }); // 15 mins
+        res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 }); // 7 days
+        
+        res.status(200).json({
             message: "Login Successful",
             token,
             refreshToken,
@@ -133,30 +126,21 @@ const forgotPassword = async (req, res) => {
             return res.status(404).json({ message: "No user found with that email" });
         }
 
-        // 1. Generate secure 32-byte random hex token (Plain text for URL)
-        const resetToken = crypto.randomBytes(32).toString("hex");
+        // 1. Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // 2. Hash with SHA-256 and save to DB with 15-min expiry
-        user.resetPasswordToken = crypto
-            .createHash("sha256")
-            .update(resetToken)
-            .digest("hex");
-            
+        // 2. Hash with SHA-256 and save to DB
+        user.resetPasswordToken = crypto.createHash("sha256").update(otp).digest("hex");
         user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
 
         await user.save({ validateBeforeSave: false });
 
-        // 3. Create Reset URL (Frontend URL in prod, API URL for testing)
-        const resetUrl = `http://localhost:7777/reset-password/${resetToken}`;
-
         const message = `
             <h3>You requested a password reset</h3>
-            <p>Click the link below to reset your password. It expires in 15 minutes:</p>
-            <a href="${resetUrl}" target="_blank">${resetUrl}</a>
-            <p>If you did not request this, please ignore this email.</p>
+            <p>Your password reset OTP is: <strong>${otp}</strong></p>
+            <p>It expires in 15 minutes. If you did not request this, please ignore this email.</p>
         `;
 
-        // 4. Send email
         try {
             await sendEmail({
                 email: user.email,
@@ -171,37 +155,30 @@ const forgotPassword = async (req, res) => {
             return res.status(500).json({ message: "Email could not be sent" });
         }
     } catch (error) {
-        return res.status(500).json({ message: "Internal Server Error" });
+        console.error("Forgot Password Error:", error);
+        return res.status(500).json({ message: "Internal Server Error: " + error.message });
     }
 };
 
-
-const resetPasswordWithToken = async (req, res) => {
+const resetPasswordWithOTP = async (req, res) => {
     try {
-        const resetToken = req.params.token;
-        const { newPassword } = req.body;
+        const { email, otp, newPassword } = req.body;
 
         if (!newPassword || newPassword.length < 6) {
             return res.status(400).json({ message: "Password must be at least 6 characters" });
         }
 
-        // 1. Hash incoming URL token to compare with MongoDB hash
-        const hashedToken = crypto
-            .createHash("sha256")
-            .update(resetToken)
-            .digest("hex"); // .digest("hex") converts raw binary SHA-256 hash output into a readable hexadecimal string (64 characters 0-9, a-f)
-
-        // 2. Find user by hashed token AND verify current time < expiry
+        const hashedToken = crypto.createHash("sha256").update(otp.toString()).digest("hex");
         const user = await User.findOne({
+            email: email?.trim().toLowerCase(),
             resetPasswordToken: hashedToken,
             resetPasswordExpire: { $gt: Date.now() }
         });
 
         if (!user) {
-            return res.status(400).json({ message: "Invalid or expired password reset token" });
+            return res.status(400).json({ message: "Invalid or expired OTP" });
         }
 
-        // 3. Set new password (pre('save') hook in user.js will automatically bcrypt hash it!)
         user.password = newPassword;
         user.resetPasswordToken = undefined;
         user.resetPasswordExpire = undefined;
@@ -232,7 +209,6 @@ const refreshTokenController = async (req, res) => {
 
         const tokenExists = user.refreshTokens.some(t => t.token === incomingRefreshToken);
 
-        // SECURITY: TOKEN REPLAY ATTACK DETECTION
         if (!tokenExists) {
             user.refreshTokens = [];
             await user.save();
@@ -242,7 +218,6 @@ const refreshTokenController = async (req, res) => {
             });
         }
 
-        // ROTATION: Remove old token and issue new ones
         user.refreshTokens = user.refreshTokens.filter(t => t.token !== incomingRefreshToken);
         const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "15m" });
         const newRefreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: "7d" });
@@ -253,12 +228,13 @@ const refreshTokenController = async (req, res) => {
         });
         await user.save();
 
-        res.cookie("refreshToken", newRefreshToken, {
+        const cookieOptions = {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        });
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+        };
+
+        res.cookie("refreshToken", newRefreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
         return res.status(200).json({
             message: "Token refreshed successfully",
@@ -269,7 +245,124 @@ const refreshTokenController = async (req, res) => {
     }
 };
 
+const logoutController = async (req, res) => {
+    try {
+        const { refreshToken } = req.cookies;
+        if (refreshToken) {
+            const user = await User.findOne({ "refreshTokens.token": refreshToken });
+            if (user) {
+                user.refreshTokens = user.refreshTokens.filter(t => t.token !== refreshToken);
+                await user.save({ validateBeforeSave: false });
+            }
+        }
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+        };
+        res.clearCookie("token", cookieOptions);
+        res.clearCookie("refreshToken", cookieOptions);
+        res.status(200).json({ message: "Logged out successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Error during logout" });
+    }
+};
 
+const sendVerificationEmail = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (user.isverified) return res.status(400).json({ message: "Email already verified" });
 
-module.exports = { registerUser, login, forgotPassword, resetPasswordWithToken, refreshTokenController };
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        user.otpCode = crypto.createHash("sha256").update(otp).digest("hex");
+        user.otpExpire = Date.now() + 15 * 60 * 1000;
+        await user.save({ validateBeforeSave: false });
 
+        await sendEmail({
+            email: user.email,
+            subject: "Email Verification OTP",
+            html: `<h3>Your OTP is: ${otp}</h3><p>It expires in 15 minutes.</p>`
+        });
+
+        res.status(200).json({ message: "Verification OTP sent to email" });
+    } catch (error) {
+        res.status(500).json({ message: "Failed to send OTP" });
+    }
+};
+
+const verifyEmailOTP = async (req, res) => {
+    try {
+        const { otp } = req.body;
+        const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+        const user = await User.findOne({
+            _id: req.user.id,
+            otpCode: hashedOtp,
+            otpExpire: { $gt: Date.now() }
+        });
+
+        if (!user) return res.status(400).json({ message: "Invalid or expired OTP" });
+
+        user.isverified = true;
+        user.otpCode = undefined;
+        user.otpExpire = undefined;
+        await user.save({ validateBeforeSave: false });
+
+        res.status(200).json({ message: "Email successfully verified!" });
+    } catch (error) {
+        res.status(500).json({ message: "Error verifying email" });
+    }
+};
+
+const enable2FA = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        user.twoFactorEnabled = req.body.enable;
+        await user.save({ validateBeforeSave: false });
+        res.status(200).json({ message: `Two-Factor Authentication ${user.twoFactorEnabled ? 'enabled' : 'disabled'}` });
+    } catch (error) {
+        res.status(500).json({ message: "Error updating 2FA settings" });
+    }
+};
+
+const googleOAuthLogin = async (req, res) => {
+    try {
+        const { token } = req.body;
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+        const payload = ticket.getPayload();
+        
+        let user = await User.findOne({ email: payload.email });
+        if (!user) {
+            user = new User({
+                name: payload.name,
+                email: payload.email,
+                password: crypto.randomBytes(16).toString("hex"),
+                isverified: payload.email_verified
+            });
+            await user.save();
+        }
+
+        const jwtToken = generateToken(user._id);
+        const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET, { expiresIn: "7d" });
+        
+        user.refreshTokens.push({ token: refreshToken, device: req.headers["user-agent"] || "OAuth" });
+        await user.save({ validateBeforeSave: false });
+
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+        };
+
+        res.cookie("token", jwtToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
+        res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+        
+        res.status(200).json({ message: "OAuth Login Successful", token: jwtToken, refreshToken, user: { id: user._id, name: user.name, email: user.email } });
+    } catch (error) {
+        res.status(500).json({ message: "OAuth login failed", error: error.message });
+    }
+};
+
+module.exports = { registerUser, login, forgotPassword, resetPasswordWithOTP, refreshTokenController, logoutController, sendVerificationEmail, verifyEmailOTP, enable2FA, googleOAuthLogin };

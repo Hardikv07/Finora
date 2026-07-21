@@ -1,13 +1,25 @@
 import React from 'react';
-import { Bell, Search, Globe, User, Menu, RefreshCw } from 'lucide-react';
+import { Bell, Search, Globe, User, Menu, RefreshCw, LogOut } from 'lucide-react';
 import { useFinanceData } from '../../hooks/useFinanceData';
 import { CURRENCIES } from '../../constants/categories';
+import TransactionSearch from './TransactionSearch';
 
 /**
  * Top Navigation Bar with active page indicators, currency selector, and notification bell
  */
 const Navbar = ({ activePage, onToggleSidebar, onQuickSearch }) => {
   const { user, selectedCurrency, setSelectedCurrency, resetData } = useFinanceData();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('http://localhost:7777/api/auth/logout', { method: 'POST', credentials: 'include' });
+      // Clear mock data to simulate real logout
+      localStorage.clear();
+      window.location.reload();
+    } catch (e) {
+      console.error('Logout error', e);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-4">
@@ -33,18 +45,10 @@ const Navbar = ({ activePage, onToggleSidebar, onQuickSearch }) => {
 
       {/* Right side: Search trigger + Currency + Notifications + Profile */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Quick Search trigger */}
-        <button
-          onClick={onQuickSearch}
-          className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 bg-slate-100/80 hover:bg-slate-200/70 border border-slate-200/60 rounded-xl text-xs font-medium text-slate-600 transition-all"
-          title="Quick Search (Ctrl+K)"
-        >
-          <Search className="w-3.5 h-3.5 text-slate-400" />
-          <span>Quick Search...</span>
-          <span className="ml-1 px-1.5 py-0.5 bg-white text-slate-500 rounded border border-slate-200 font-mono text-[10px]">
-            ⌘K
-          </span>
-        </button>
+        {/* Smart Transaction Search */}
+        <div className="hidden sm:block">
+          <TransactionSearch />
+        </div>
 
         {/* Currency Switcher */}
         <div className="relative flex items-center bg-slate-100/80 rounded-xl p-1 border border-slate-200/60">
@@ -84,20 +88,30 @@ const Navbar = ({ activePage, onToggleSidebar, onQuickSearch }) => {
           </button>
         </div>
 
-        {/* User Profile avatar */}
-        <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-700 flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-primary-100">
-            {user?.name ? user.name.charAt(0) : <User className="w-4 h-4" />}
+        {/* User Profile avatar & Logout */}
+        <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-700 flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-primary-100">
+              {user?.name ? user.name.charAt(0) : <User className="w-4 h-4" />}
+            </div>
+            <div className="hidden md:block">
+              <p className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px]">
+                {user?.name || 'John Doe'}
+              </p>
+              <p className="text-[10px] font-medium text-emerald-600 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Pro Plan
+              </p>
+            </div>
           </div>
-          <div className="hidden md:block">
-            <p className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px]">
-              {user?.name || 'John Doe'}
-            </p>
-            <p className="text-[10px] font-medium text-emerald-600 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              Pro Plan
-            </p>
-          </div>
+          
+          <button
+            onClick={handleLogout}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-1"
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>

@@ -269,6 +269,99 @@ export const apiService = {
     return true;
   },
 
+  // Bills (Utility bill reminders / recurring trackers)
+  getBills: async () => {
+    const res = await apiRequest('/bills');
+    if (res?.bills) return res.bills;
+    return getLocalData('bills', []);
+  },
+  createBill: async (billData) => {
+    const res = await apiRequest('/bills', 'POST', billData);
+    if (res?.bill) {
+      // Also store locally for offline access
+      const current = getLocalData('bills', []);
+      setLocalData('bills', [res.bill, ...current]);
+      return res.bill;
+    }
+    // Local fallback
+    const current = getLocalData('bills', []);
+    const newBill = {
+      _id: 'bill_' + Date.now(),
+      status: billData.status || 'PENDING',
+      paymentHistory: [],
+      createdAt: new Date().toISOString(),
+      ...billData,
+    };
+    setLocalData('bills', [newBill, ...current]);
+    return newBill;
+  },
+  updateBill: async (id, billData) => {
+    const current = getLocalData('bills', []);
+    const updated = current.map((b) => (b._id === id ? { ...b, ...billData } : b));
+    setLocalData('bills', updated);
+    return updated.find((b) => b._id === id);
+  },
+  deleteBill: async (id) => {
+    const current = getLocalData('bills', []);
+    setLocalData('bills', current.filter((b) => b._id !== id));
+    return true;
+  },
+
+  /**
+   * Upload a bill file to the backend parse endpoint for server-side extraction.
+   * Returns { merchant, amount, date, category } or null on failure.
+   */
+  parseBillFile: async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('receipt', file);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const token = localStorage.getItem('finora_auth_token');
+      const response = await fetch(`${BASE_URL}/transactions/parse-bill`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!response.ok) return null;
+      return await response.json();
+    } catch {
+      return null;
+    }
+  },
+
+  // Search APIs
+  getSearchSuggestions: async (query) => {
+    const res = await apiRequest(`/search/suggestions?q=${encodeURIComponent(query)}`);
+    let suggestions = res?.suggestions || [];
+    
+    // Fallback to local storage demo data if backend is empty
+    if (suggestions.length === 0 && query.trim()) {
+      const localTxs = getLocalData('transactions', INITIAL_TRANSACTIONS);
+      const q = query.toLowerCase();
+      const localSuggestions = new Set();
+      
+      localTxs.forEach(tx => {
+        if (tx.merchant && tx.merchant.toLowerCase().includes(q)) localSuggestions.add(tx.merchant);
+        if (tx.category && tx.category.toLowerCase().includes(q)) localSuggestions.add(tx.category);
+        if (tx.tags) {
+          tx.tags.forEach(tag => {
+            if (tag.toLowerCase().includes(q)) localSuggestions.add(tag);
+          });
+        }
+      });
+      suggestions = Array.from(localSuggestions).slice(0, 10);
+    }
+    return suggestions;
+  },
+  
+  searchTransactions: async (query) => {
+    const res = await apiRequest(`/search/transactions?q=${encodeURIComponent(query)}`);
+    return res?.transactions || [];
+  },
+
   // Reset to initial dummy data
   resetDemoData: () => {
     localStorage.clear();

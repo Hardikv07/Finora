@@ -1,4 +1,5 @@
 // ============================================================================
+// ============================================================================
 // backend/routes/transactionRoutes.js
 // ============================================================================
 const express = require("express");
@@ -9,9 +10,13 @@ const {
     createTransaction, 
     getTransactions, 
     updateTransaction, 
-    deleteTransaction 
+    deleteTransaction,
+    parseBillFromUpload
 } = require("../controllers/transactionController");
  
+// Parse bill file and return extracted data (must be before generic POST /)
+router.post("/parse-bill", protect, uploadReceipt, handleReceiptUpload, parseBillFromUpload);
+
 // Create Transaction with optional multipart receipt file upload
 router.post("/", protect, uploadReceipt, handleReceiptUpload, createTransaction);
 router.get("/", protect, getTransactions);

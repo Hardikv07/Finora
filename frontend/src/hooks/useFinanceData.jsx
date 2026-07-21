@@ -13,19 +13,21 @@ export const FinanceProvider = ({ children }) => {
   const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
   const [recurring, setRecurring] = useState([]);
+  const [bills, setBills] = useState([]);
   const [selectedCurrency, setSelectedCurrency] = useState('INR');
 
   // Load initial data
   const refreshAllData = useCallback(async (showLoader = false) => {
     if (showLoader) setLoading(true);
     try {
-      const [uData, wData, tData, bData, gData, rData] = await Promise.all([
+      const [uData, wData, tData, bData, gData, rData, billData] = await Promise.all([
         apiService.getUserProfile(),
         apiService.getWallets(),
         apiService.getTransactions(),
         apiService.getBudgets(),
         apiService.getGoals(),
-        apiService.getRecurring()
+        apiService.getRecurring(),
+        apiService.getBills()
       ]);
 
       setUser(uData);
@@ -34,6 +36,7 @@ export const FinanceProvider = ({ children }) => {
       setBudgets(bData);
       setGoals(gData);
       setRecurring(rData);
+      setBills(Array.isArray(billData) ? billData : []);
       if (uData?.currency) setSelectedCurrency(uData.currency);
     } catch (error) {
       console.error('Error fetching finance data:', error);
@@ -187,6 +190,32 @@ export const FinanceProvider = ({ children }) => {
     }
   };
 
+  // Bill Actions
+  const addBill = async (billData) => {
+    try {
+      const created = await apiService.createBill(billData);
+      setBills((prev) => [created, ...prev]);
+      addToast({
+        title: 'Bill Tracked',
+        message: `"${billData.title}" added to bill reminders!`,
+        type: 'success'
+      });
+      return created;
+    } catch (err) {
+      addToast({ title: 'Error', message: 'Could not create bill record.', type: 'error' });
+    }
+  };
+
+  const deleteBill = async (id) => {
+    try {
+      await apiService.deleteBill(id);
+      setBills((prev) => prev.filter((b) => b._id !== id));
+      addToast({ title: 'Bill Removed', message: 'Bill reminder deleted.', type: 'info' });
+    } catch (err) {
+      addToast({ title: 'Error', message: 'Failed to remove bill.', type: 'error' });
+    }
+  };
+
   const resetData = async () => {
     apiService.resetDemoData();
     await refreshAllData(true);
@@ -203,6 +232,7 @@ export const FinanceProvider = ({ children }) => {
         budgets,
         goals,
         recurring,
+        bills,
         selectedCurrency,
         setSelectedCurrency,
         refreshAllData,
@@ -217,6 +247,8 @@ export const FinanceProvider = ({ children }) => {
         contributeGoal,
         addRecurring,
         deleteRecurring,
+        addBill,
+        deleteBill,
         resetData
       }}
     >
