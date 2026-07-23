@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Filter, Download, FileUp, Search, X } from 'lucide-react';
 import { useFinanceData } from '../hooks/useFinanceData';
 import { useDebounce } from '../hooks/useDebounce';
@@ -11,9 +11,9 @@ import BillImportModal from '../components/transactions/BillImportModal';
 /**
  * Transactions Page with search, filters, sorting, and export controls
  */
-const TransactionsPage = () => {
+const TransactionsPage = ({ defaultSearchQuery = '', onClearSearch }) => {
   const { transactions, deleteTransaction } = useFinanceData();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(defaultSearchQuery || '');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'income' | 'expense'
   const [filterCategory, setFilterCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,6 +23,15 @@ const TransactionsPage = () => {
   const [billImportOpen, setBillImportOpen] = useState(false);
 
   const debouncedQuery = useDebounce(searchQuery, 250);
+
+  useEffect(() => {
+    if (defaultSearchQuery) {
+      setSearchQuery(defaultSearchQuery);
+      setFilterType('all');
+      setFilterCategory('all');
+      setCurrentPage(1);
+    }
+  }, [defaultSearchQuery]);
 
   // Extract unique categories — scoped to the active type filter so dropdown stays relevant
   const allCategories = useMemo(() => {
@@ -127,6 +136,7 @@ const TransactionsPage = () => {
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
+                if (onClearSearch && !e.target.value) onClearSearch();
               }}
               placeholder="Search merchants, categories, tags, amounts..."
               autoComplete="off"
@@ -135,7 +145,7 @@ const TransactionsPage = () => {
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
+                onClick={() => { setSearchQuery(''); setCurrentPage(1); if (onClearSearch) onClearSearch(); }}
                 className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors z-10"
                 aria-label="Clear search"
               >
@@ -194,7 +204,7 @@ const TransactionsPage = () => {
           {/* Clear all filters button */}
           {(debouncedQuery || filterType !== 'all' || filterCategory !== 'all') && (
             <button
-              onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterCategory('all'); setCurrentPage(1); }}
+              onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterCategory('all'); setCurrentPage(1); if (onClearSearch) onClearSearch(); }}
               className="text-xs font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors border border-rose-100"
             >
               Clear all

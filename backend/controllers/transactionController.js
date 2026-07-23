@@ -5,6 +5,7 @@ const { cloudinary } = require("../middleware/uploadmiddleware");
 const { evaluateBudgetAlerts } = require("../utils/budgetEvaluation");
 const { processGoalAutoContributions } = require("../utils/goalEvaluation");
 const searchService = require("../services/searchService");
+const geminiService = require("../services/geminiService");
  
 /**
  * @desc    Create new Income or Expense transaction with optional receipt URL
@@ -275,10 +276,33 @@ const parseBillFromUpload = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Parse OCR text using Gemini AI
+ * @route   POST /api/transactions/parse-ocr
+ * @access  Private
+ */
+const parseOcrText = async (req, res) => {
+    try {
+        const { ocrText } = req.body;
+        if (!ocrText || !ocrText.trim()) {
+            return res.status(400).json({ message: "No OCR text provided." });
+        }
+
+        const parsedData = await geminiService.parseFinancialDocument(ocrText);
+        return res.status(200).json({
+            extracted: parsedData
+        });
+    } catch (error) {
+        console.error("Gemini parse failed:", error);
+        return res.status(500).json({ message: "Failed to parse OCR text.", error: error.message });
+    }
+};
+
 module.exports = {
     createTransaction,
     getTransactions,
     updateTransaction,
     deleteTransaction,
-    parseBillFromUpload
+    parseBillFromUpload,
+    parseOcrText
 };

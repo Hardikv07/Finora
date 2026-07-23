@@ -16,6 +16,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
 
   useEffect(() => {
     // Simple mock check for active session
@@ -43,7 +44,7 @@ function App() {
       case 'dashboard':
         return <DashboardPage onNavigate={setActiveTab} />;
       case 'transactions':
-        return <TransactionsPage />;
+        return <TransactionsPage defaultSearchQuery={globalSearchQuery} onClearSearch={() => setGlobalSearchQuery('')} />;
       case 'wallets':
         return <WalletsPage />;
       case 'budgets':
@@ -60,7 +61,12 @@ function App() {
   };
 
   return (
-    <MainLayout activeTab={activeTab} onTabChange={setActiveTab}>
+    <MainLayout 
+      activeTab={activeTab} 
+      onTabChange={setActiveTab}
+      globalSearchQuery={globalSearchQuery}
+      setGlobalSearchQuery={setGlobalSearchQuery}
+    >
       {renderPage()}
     </MainLayout>
   );

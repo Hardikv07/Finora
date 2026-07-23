@@ -190,6 +190,32 @@ const mapToBillCategory = (expenseCat = '') => {
   return m[expenseCat] || 'Other';
 };
 
+const mapGeminiCategoryToApp = (geminiCat = '') => {
+  const normalized = String(geminiCat).trim().toLowerCase();
+  
+  const mapping = {
+    'food': 'Food & Dining',
+    'groceries': 'Food & Dining',
+    'rent': 'Housing & Rent',
+    'transportation': 'Transportation',
+    'fuel': 'Transportation',
+    'travel': 'Travel & Vacations',
+    'entertainment': 'Entertainment',
+    'subscription': 'Entertainment',
+    'utilities': 'Utilities & Bills',
+    'shopping': 'Shopping',
+    'electronics': 'Shopping',
+    'home': 'Shopping',
+    'personal care': 'Shopping',
+    'medical': 'Healthcare & Fitness',
+    'healthcare': 'Healthcare & Fitness',
+    'insurance': 'Healthcare & Fitness',
+    'education': 'Education'
+  };
+
+  return mapping[normalized] || 'Other Expense';
+};
+
 /* ─── component ─────────────────────────────────────────────── */
 
 const BillImportModal = ({ isOpen, onClose }) => {
@@ -321,11 +347,39 @@ const BillImportModal = ({ isOpen, onClose }) => {
 
     // Small pause so user sees 100%
     await new Promise(r => setTimeout(r, 500));
-    setOcrStatus('Analyzing bill data…');
+    setOcrStatus('Analyzing bill data with AI…');
     await new Promise(r => setTimeout(r, 300));
 
     const combined = textContent + ' ' + selectedFile.name;
-    const extracted = extractBillData(combined);
+    let extracted = {};
+    
+    try {
+      const parsed = await apiService.parseOcrText(textContent);
+      if (parsed && (parsed.amount || parsed.merchant)) {
+        extracted = {
+          merchant: parsed.merchant,
+          amount: parsed.amount,
+          category: mapGeminiCategoryToApp(parsed.category),
+          date: parsed.date,
+          confidence: parsed.confidence,
+          notes: parsed.notes
+        };
+      } else {
+        throw new Error('Invalid parser response format');
+      }
+    } catch (err) {
+      console.warn('Gemini AI parsing failed, falling back to local extractor:', err);
+      const localExtracted = extractBillData(combined);
+      extracted = {
+        merchant: localExtracted.merchant,
+        amount: localExtracted.amount,
+        category: localExtracted.category,
+        date: localExtracted.date,
+        confidence: 50,
+        notes: 'Inferred locally using regex (AI parse failed).'
+      };
+    }
+
     setExtractedData(extracted);
 
     // Auto-detect recurring
@@ -340,7 +394,9 @@ const BillImportModal = ({ isOpen, onClose }) => {
       category: extracted.category || prev.category,
       date:     extracted.date     || prev.date,
       walletId: wallets[0]?._id   || '',
-      notes: `Imported from bill: ${selectedFile.name}`,
+      notes: extracted.notes 
+        ? `Imported from bill: ${selectedFile.name} (AI notes: ${extracted.notes})`
+        : `Imported from bill: ${selectedFile.name}`,
     }));
 
     setStage('confirm');

@@ -7,7 +7,7 @@ import TransactionSearch from './TransactionSearch';
 /**
  * Top Navigation Bar with active page indicators, currency selector, and notification bell
  */
-const Navbar = ({ activePage, onToggleSidebar, onQuickSearch }) => {
+const Navbar = ({ activePage, onToggleSidebar, onOpenQuickAdd, onSelectTransaction, onSearchTermSelect }) => {
   const { user, selectedCurrency, setSelectedCurrency, resetData } = useFinanceData();
 
   const handleLogout = async () => {
@@ -47,7 +47,10 @@ const Navbar = ({ activePage, onToggleSidebar, onQuickSearch }) => {
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Smart Transaction Search */}
         <div className="hidden sm:block">
-          <TransactionSearch />
+          <TransactionSearch 
+            onSelectTransaction={onSelectTransaction}
+            onSearchTermSelect={onSearchTermSelect}
+          />
         </div>
 
         {/* Currency Switcher */}

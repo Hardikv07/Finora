@@ -271,21 +271,35 @@ const TransactionFormModal = ({ isOpen, onClose, initialData = null }) => {
 
         {/* Receipt Attachment UI */}
         <div className="pt-2">
-          {formData.receiptUrl ? (
+          {(formData.receiptUrl || formData.hasReceipt) ? (
             <div className="flex items-center gap-4 p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <a href={formData.receiptUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 relative group rounded-lg overflow-hidden border border-slate-200 block w-16 h-16 bg-white">
-                <img src={formData.receiptUrl} alt="Bill Receipt" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="text-white text-[10px] font-bold">VIEW</span>
+              {formData.receiptUrl ? (
+                <>
+                  <a href={formData.receiptUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 relative group rounded-lg overflow-hidden border border-slate-200 block w-16 h-16 bg-white">
+                    <img src={formData.receiptUrl} alt="Bill Receipt" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white text-[10px] font-bold">VIEW</span>
+                    </div>
+                  </a>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">Attached Bill / Receipt</p>
+                    <p className="text-xs text-slate-500">This transaction has an uploaded image.</p>
+                    <a href={formData.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 mt-1 inline-block">
+                      Open full image &rarr;
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-3 w-full">
+                  <div className="w-12 h-12 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">
+                     <span className="text-slate-400 font-bold text-xs">OFFLINE</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">Offline Receipt</p>
+                    <p className="text-xs text-slate-500">No digital image is available.</p>
+                  </div>
                 </div>
-              </a>
-              <div>
-                <p className="text-sm font-bold text-slate-800">Attached Bill / Receipt</p>
-                <p className="text-xs text-slate-500">This transaction has an uploaded image.</p>
-                <a href={formData.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 mt-1 inline-block">
-                  Open full image &rarr;
-                </a>
-              </div>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2 pt-1">

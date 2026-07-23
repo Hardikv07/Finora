@@ -11,8 +11,12 @@ const {
     getTransactions, 
     updateTransaction, 
     deleteTransaction,
-    parseBillFromUpload
+    parseBillFromUpload,
+    parseOcrText
 } = require("../controllers/transactionController");
+ 
+// Parse OCR text using Gemini AI
+router.post("/parse-ocr", protect, parseOcrText);
  
 // Parse bill file and return extracted data (must be before generic POST /)
 router.post("/parse-bill", protect, uploadReceipt, handleReceiptUpload, parseBillFromUpload);

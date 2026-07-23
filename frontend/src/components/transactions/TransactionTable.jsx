@@ -111,11 +111,10 @@ const TransactionTable = ({ transactions = [], onDelete, onEdit, searchQuery = '
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
-                            isIncome
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${isIncome
                               ? 'bg-emerald-100 text-emerald-700'
                               : 'bg-rose-100 text-rose-700'
-                          }`}
+                            }`}
                         >
                           {isIncome ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
                         </div>
@@ -178,9 +177,8 @@ const TransactionTable = ({ transactions = [], onDelete, onEdit, searchQuery = '
                     {/* Amount */}
                     <td className="py-4 px-6 text-right">
                       <span
-                        className={`font-black text-base ${
-                          isIncome ? 'text-emerald-600' : 'text-slate-900'
-                        }`}
+                        className={`font-black text-base ${isIncome ? 'text-emerald-600' : 'text-slate-900'
+                          }`}
                       >
                         {isIncome ? '+' : '-'}
                         {formatCurrency(tx.amount, selectedCurrency)}

@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Loader2, X } from 'lucide-react';
 import { apiService } from '../../services/api';
 
-const TransactionSearch = () => {
+const TransactionSearch = ({ onSelectTransaction, onSearchTermSelect }) => {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const [matchedTransactions, setMatchedTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -15,14 +16,19 @@ const TransactionSearch = () => {
     const fetchSuggestions = async () => {
       if (!query.trim()) {
         setSuggestions([]);
+        setMatchedTransactions([]);
         setIsOpen(false);
         return;
       }
 
       setLoading(true);
       try {
-        const results = await apiService.getSearchSuggestions(query);
+        const [results, txResults] = await Promise.all([
+          apiService.getSearchSuggestions(query),
+          apiService.searchTransactions(query)
+        ]);
         setSuggestions(results);
+        setMatchedTransactions(txResults || []);
         setIsOpen(true);
         setSelectedIndex(-1); // reset selection
       } catch (error) {
@@ -53,9 +59,11 @@ const TransactionSearch = () => {
   const handleKeyDown = (e) => {
     if (!isOpen) return;
 
+    const totalCount = suggestions.length + matchedTransactions.length;
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : prev));
+      setSelectedIndex(prev => (prev < totalCount - 1 ? prev + 1 : prev));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
@@ -63,6 +71,8 @@ const TransactionSearch = () => {
       e.preventDefault();
       if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
         handleSelectSuggestion(suggestions[selectedIndex]);
+      } else if (selectedIndex >= suggestions.length && selectedIndex < totalCount) {
+        handleSelectTransaction(matchedTransactions[selectedIndex - suggestions.length]);
       } else if (query) {
         handleSelectSuggestion(query);
       }
@@ -72,16 +82,25 @@ const TransactionSearch = () => {
   };
 
   const handleSelectSuggestion = (suggestion) => {
-    setQuery(suggestion);
+    setQuery('');
     setIsOpen(false);
-    // Here you could trigger a navigation to a search results page or filter the dashboard
-    console.log("Selected:", suggestion);
-    // Example: window.location.href = `/transactions?search=${encodeURIComponent(suggestion)}`;
+    if (onSearchTermSelect) {
+      onSearchTermSelect(suggestion);
+    }
+  };
+
+  const handleSelectTransaction = (tx) => {
+    setQuery('');
+    setIsOpen(false);
+    if (onSelectTransaction) {
+      onSelectTransaction(tx);
+    }
   };
 
   const clearSearch = () => {
     setQuery('');
     setSuggestions([]);
+    setMatchedTransactions([]);
     setIsOpen(false);
   };
 
@@ -89,8 +108,6 @@ const TransactionSearch = () => {
   const renderHighlightedText = (text, highlight) => {
     if (!highlight.trim()) return text;
     
-    // We want to highlight the part that matches the query.
-    // For fuzzy matches, it might be tricky, but we'll use a regex for exact substrings.
     const regex = new RegExp(`(${highlight})`, 'gi');
     const parts = text.split(regex);
     
@@ -130,34 +147,87 @@ const TransactionSearch = () => {
 
       {/* Dropdown Menu */}
       {isOpen && query.trim() !== '' && (
-        <div className="absolute mt-1 w-full bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 ring-1 ring-black ring-opacity-5 overflow-hidden border dark:border-gray-700 transition-all duration-200">
-          <ul className="max-h-60 overflow-auto py-1 text-base sm:text-sm">
-            {suggestions.length > 0 ? (
-              suggestions.map((suggestion, index) => (
-                <li
-                  key={index}
-                  onClick={() => handleSelectSuggestion(suggestion)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                  className={`cursor-pointer select-none relative py-2 pl-4 pr-9 transition-colors ${
-                    index === selectedIndex 
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' 
-                      : 'text-gray-900 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <Search className="h-3 w-3 mr-2 text-gray-400" />
-                    <span className="block truncate">
-                      {renderHighlightedText(suggestion, query)}
-                    </span>
-                  </div>
-                </li>
-              ))
-            ) : !loading ? (
-              <li className="text-gray-500 dark:text-gray-400 cursor-default select-none relative py-3 pl-4 pr-9 text-center italic">
-                No results found
-              </li>
-            ) : null}
-          </ul>
+        <div className="absolute mt-1 w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg z-50 ring-1 ring-black ring-opacity-5 overflow-hidden border dark:border-gray-700 transition-all duration-200 p-1.5">
+          <div className="max-h-80 overflow-auto text-base sm:text-sm">
+            
+            {/* Section 1: Suggestions */}
+            {suggestions.length > 0 && (
+              <div className="py-1">
+                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Search Keywords</div>
+                {suggestions.map((suggestion, index) => {
+                  const isCurrent = index === selectedIndex;
+                  return (
+                    <div
+                      key={`s-${index}`}
+                      onClick={() => handleSelectSuggestion(suggestion)}
+                      onMouseEnter={() => setSelectedIndex(index)}
+                      className={`cursor-pointer select-none relative py-1.5 pl-3 pr-9 rounded-lg transition-colors ${
+                        isCurrent 
+                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' 
+                          : 'text-gray-900 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center text-xs">
+                        <Search className="h-3 w-3 mr-2 text-gray-400" />
+                        <span className="block truncate">
+                          {renderHighlightedText(suggestion, query)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+ 
+            {/* Section 2: Transactions */}
+            {matchedTransactions.length > 0 && (
+              <div className="py-1 border-t border-slate-100 dark:border-gray-700/50 mt-1 pt-1.5">
+                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Matching Transactions</div>
+                {matchedTransactions.map((tx, index) => {
+                  const adjustedIndex = index + suggestions.length;
+                  const isCurrent = adjustedIndex === selectedIndex;
+                  const isIncome = tx.type?.toLowerCase() === 'income';
+                  return (
+                    <div
+                      key={`t-${tx._id}`}
+                      onClick={() => handleSelectTransaction(tx)}
+                      onMouseEnter={() => setSelectedIndex(adjustedIndex)}
+                      className={`cursor-pointer select-none relative py-1.5 px-3 rounded-lg transition-colors flex items-center justify-between gap-2 ${
+                        isCurrent 
+                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' 
+                          : 'text-gray-900 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center min-w-0">
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mr-2 text-[10px] font-bold ${
+                          isIncome ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {isIncome ? '+' : '-'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-xs truncate text-slate-800 dark:text-slate-200">
+                            {renderHighlightedText(tx.merchant || 'General Entry', query)}
+                          </p>
+                          <p className="text-[9px] text-slate-400 capitalize">
+                            {tx.category} • {new Date(tx.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-black shrink-0 ${isIncome ? 'text-emerald-600' : 'text-slate-900 dark:text-slate-100'}`}>
+                        ₹{tx.amount?.toLocaleString()}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+ 
+            {suggestions.length === 0 && matchedTransactions.length === 0 && !loading && (
+              <div className="text-gray-500 dark:text-gray-400 cursor-default select-none relative py-6 text-center italic text-xs">
+                No matching keywords or transactions
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

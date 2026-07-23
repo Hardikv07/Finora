@@ -331,6 +331,15 @@ export const apiService = {
       return null;
     }
   },
+  
+  /**
+   * Parse OCR text using Gemini AI backend.
+   * Returns extracted financial transaction fields or null.
+   */
+  parseOcrText: async (ocrText) => {
+    const res = await apiRequest('/transactions/parse-ocr', 'POST', { ocrText });
+    return res?.extracted || null;
+  },
 
   // Search APIs
   getSearchSuggestions: async (query) => {
@@ -359,7 +368,20 @@ export const apiService = {
   
   searchTransactions: async (query) => {
     const res = await apiRequest(`/search/transactions?q=${encodeURIComponent(query)}`);
-    return res?.transactions || [];
+    let txs = res?.transactions || [];
+    
+    // Fallback to local storage demo data if backend is empty/offline
+    if (txs.length === 0 && query.trim()) {
+      const localTxs = getLocalData('transactions', INITIAL_TRANSACTIONS);
+      const q = query.toLowerCase();
+      txs = localTxs.filter(tx => 
+        (tx.merchant && tx.merchant.toLowerCase().includes(q)) ||
+        (tx.category && tx.category.toLowerCase().includes(q)) ||
+        (tx.notes && tx.notes.toLowerCase().includes(q)) ||
+        (tx.tags && tx.tags.some(tag => tag.toLowerCase().includes(q)))
+      );
+    }
+    return txs;
   },
 
   // Reset to initial dummy data

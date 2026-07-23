@@ -9,9 +9,9 @@ import TransactionFormModal from '../transactions/TransactionFormModal';
 /**
  * Main application layout wrapping responsive Sidebar, top Navbar, and dynamic page views
  */
-const MainLayout = ({ activeTab, onTabChange, children }) => {
+const MainLayout = ({ activeTab, onTabChange, globalSearchQuery, setGlobalSearchQuery, children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [quickAddModalOpen, setQuickAddModalOpen] = useState(false);
+  const [txModal, setTxModal] = useState({ isOpen: false, data: null });
   const { toasts, removeToast } = useToast();
 
   return (
@@ -44,7 +44,12 @@ const MainLayout = ({ activeTab, onTabChange, children }) => {
           <Navbar
             activePage={activeTab}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-            onOpenQuickAdd={() => setQuickAddModalOpen(true)}
+            onOpenQuickAdd={() => setTxModal({ isOpen: true, data: null })}
+            onSelectTransaction={(tx) => setTxModal({ isOpen: true, data: tx })}
+            onSearchTermSelect={(term) => {
+              setGlobalSearchQuery(term);
+              onTabChange('transactions');
+            }}
           />
 
           {/* Page Body Container */}
@@ -57,10 +62,11 @@ const MainLayout = ({ activeTab, onTabChange, children }) => {
         </div>
       </div>
 
-      {/* Global Quick Add Transaction Modal */}
+      {/* Global Transaction Modal */}
       <TransactionFormModal
-        isOpen={quickAddModalOpen}
-        onClose={() => setQuickAddModalOpen(false)}
+        isOpen={txModal.isOpen}
+        onClose={() => setTxModal({ isOpen: false, data: null })}
+        initialData={txModal.data}
       />
     </div>
   );
