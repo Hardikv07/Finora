@@ -5,6 +5,8 @@ import Footer from '../common/Footer';
 import Toast from '../common/Toast';
 import { useToast } from '../../hooks/useToast';
 import TransactionFormModal from '../transactions/TransactionFormModal';
+import CopilotButton from '../copilot/CopilotButton';
+import CopilotPanel from '../copilot/CopilotPanel';
 
 /**
  * Main application layout wrapping responsive Sidebar, top Navbar, and dynamic page views
@@ -12,6 +14,7 @@ import TransactionFormModal from '../transactions/TransactionFormModal';
 const MainLayout = ({ activeTab, onTabChange, globalSearchQuery, setGlobalSearchQuery, children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [txModal, setTxModal] = useState({ isOpen: false, data: null });
+  const [copilotOpen, setCopilotOpen] = useState(false);
   const { toasts, removeToast } = useToast();
 
   return (
@@ -68,6 +71,10 @@ const MainLayout = ({ activeTab, onTabChange, globalSearchQuery, setGlobalSearch
         onClose={() => setTxModal({ isOpen: false, data: null })}
         initialData={txModal.data}
       />
+
+      {/* Finora Copilot */}
+      <CopilotButton isOpen={copilotOpen} onClick={() => setCopilotOpen(o => !o)} />
+      <CopilotPanel isOpen={copilotOpen} onClose={() => setCopilotOpen(false)} />
     </div>
   );
 };

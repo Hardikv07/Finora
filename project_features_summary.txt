@@ -1,0 +1,96 @@
+================================================================================
+FINORA - ENTERPRISE PERSONAL FINANCE MANAGEMENT PLATFORM
+Project Features & Capabilities Summary
+================================================================================
+
+OVERVIEW
+--------------------------------------------------------------------------------
+Finora is a modern, full-stack personal finance SaaS application built to empower
+users to monitor net worth, track transactions, manage budgets, analyze spending,
+and achieve financial goals with AI-assisted automation.
+
+
+1. USER AUTHENTICATION & SECURITY
+--------------------------------------------------------------------------------
+• JWT-based Authentication: Secure sign-up, sign-in, and sign-out workflows.
+• Password Security: Hash encryption via bcrypt/bcryptjs.
+• Session Control: Cookie/token-based persistence with user profile management.
+
+
+2. DASHBOARD & FINANCIAL HEALTH MONITORING
+--------------------------------------------------------------------------------
+• Financial Health Score: Dynamic algorithm evaluating saving rates and budget health.
+• Net Worth Tracking: Aggregate total balance across all active accounts and wallets.
+• Monthly Overview: Visual summary of total income, total expenses, and net savings.
+• Quick Actions: Instant access to add transactions, transfer funds, or import bills.
+
+
+3. TRANSACTION MANAGEMENT & FINANCIAL LEDGER
+--------------------------------------------------------------------------------
+• Comprehensive Ledger: Searchable, sortable, and paginated transaction history.
+• Categorization & Tagging: Multi-tag support and custom category allocation.
+• Receipt Attachment: Inline viewing modal and external link support for uploaded bills.
+• CSV Data Export: One-click export of filtered transaction logs to CSV format.
+
+
+4. GEMINI AI BILL IMPORT & OCR DOCUMENT PARSER
+--------------------------------------------------------------------------------
+• Automated Extraction: Client-side OCR (Tesseract.js) combined with Google Gemini API
+  (gemini-1.5-flash) to extract transaction details from receipt images or documents.
+• Intelligent Fields: Automatically identifies merchant name, total paid amount,
+  currency, transaction date, and expense category.
+• Confidence & Notes: Assigns confidence scores (0-100%) and provides AI contextual notes.
+• Offline Fallback: Graceful regex-based fallback parser if AI key or network is unavailable.
+
+
+5. SMART GLOBAL SEARCH & NAVIGATION
+--------------------------------------------------------------------------------
+• Trie-based Autocomplete: Instant search suggestions in the top navigation bar.
+• Categorized Results: Separate presentation of "Search Keywords" (categories, tags,
+  merchants) and "Matching Transactions".
+• Global Edit Action: Clicking a matching transaction directly opens the Edit modal from anywhere.
+• Ledger Redirection: Selecting keyword suggestions automatically navigates to the Ledger page
+  with filters pre-applied.
+
+
+6. MULTI-WALLET & ACCOUNT MANAGEMENT
+--------------------------------------------------------------------------------
+• Account Types: Support for Bank Accounts, Credit Cards, Digital Wallets, and Petty Cash.
+• Balance Tracking: Real-time balance updates synced with logged transactions.
+• Inter-Wallet Transfers: Fund transfers between accounts with automatic balance adjustment.
+
+
+7. BUDGET PLANNING & ALERTS
+--------------------------------------------------------------------------------
+• Category Budgets: Set monthly spending limits per expense category.
+• Real-Time Tracking: Visual progress bars indicating percentage spent.
+• Smart Alert Thresholds: High-spending alerts triggered when budgets reach custom thresholds.
+
+
+8. SAVINGS GOALS & AUTO-CONTRIBUTIONS
+--------------------------------------------------------------------------------
+• Target Tracking: Create goal shields with target amounts, deadlines, and priorities.
+• Contribution System: Manual wallet contributions or recurring auto-contributions.
+• Progress Evaluation: Time-to-completion estimates based on current contribution rates.
+
+
+9. RECURRING BILLS & SUBSCRIPTION TRACKER
+--------------------------------------------------------------------------------
+• Subscription Management: Track recurring expenses (utilities, broadband, streaming).
+• Due Date Reminders: Upcoming bill reminder list and next due date notifications.
+• Auto-Processing: Simulated automated processing for recurring entries.
+
+
+10. FINANCIAL ANALYTICS & ANOMALY DETECTION
+--------------------------------------------------------------------------------
+• Historical Trends: Multi-month comparison of income, expenses, and net savings.
+• Anomaly Detection: Automated detection of unusual spending spikes or high savings peaks.
+• Actionable Insights: Smart tips to optimize recurring overhead and reach goals faster.
+
+
+11. TECHNOLOGY STACK
+--------------------------------------------------------------------------------
+• Frontend: React 18, Tailwind CSS, Lucide Icons, Tesseract.js, Vite
+• Backend: Node.js, Express.js, Mongoose, Google Gemini API REST Integration
+• Database: MongoDB (Atlas / Local)
+================================================================================

@@ -388,5 +388,28 @@ export const apiService = {
   resetDemoData: () => {
     localStorage.clear();
     return true;
-  }
+  },
+
+  // ── Finora Copilot ───────────────────────────────────────────────────────
+  copilotChat: async (message, history = []) => {
+    const token = localStorage.getItem('finora_auth_token');
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch('http://localhost:7777/api/copilot/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ message, history }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Copilot error (${response.status})`);
+    }
+
+    return response.json();
+  },
 };
+

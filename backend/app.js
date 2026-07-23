@@ -15,6 +15,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const timelineRoutes = require("./routes/timelineRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const searchRoutes = require("./routes/searchRoutes");
+const copilotRoutes = require("./routes/copilotRoutes");
 const cookieParser = require("cookie-parser");
 const dotenv = require("dotenv");
 dotenv.config();
@@ -25,8 +26,8 @@ app.use(cors({
     origin: true,
     credentials: true
 }));
-app.use(express.json()) // It allows the app to parse JSON bodies
-app.use(express.urlencoded({ extended: true })) // It allows the app to parse URL-encoded bodies
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser());
 
 app.use("/api/auth", authroutes);
@@ -44,5 +45,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/timeline", timelineRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/copilot", copilotRoutes);
 
-module.exports = app
+module.exports = app
