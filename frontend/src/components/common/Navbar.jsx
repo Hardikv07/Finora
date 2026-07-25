@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Search, Globe, User, Menu, RefreshCw, LogOut } from 'lucide-react';
+import { Search, Globe, User, Menu, RefreshCw, LogOut } from 'lucide-react';
 import { useFinanceData } from '../../hooks/useFinanceData';
 import { CURRENCIES } from '../../constants/categories';
 import TransactionSearch from './TransactionSearch';
@@ -12,14 +12,18 @@ const Navbar = ({ activePage, onToggleSidebar, onOpenQuickAdd, onSelectTransacti
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:7777/api/auth/logout', { method: 'POST', credentials: 'include' });
-      // Clear mock data to simulate real logout
-      localStorage.clear();
-      window.location.reload();
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (e) {
-      console.error('Logout error', e);
+      console.error('Logout error:', e);
+    } finally {
+      // Remove only Finora's own keys — do NOT wipe all localStorage
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('finora_'))
+        .forEach((k) => localStorage.removeItem(k));
+      window.location.reload();
     }
   };
+
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-4">
@@ -79,17 +83,7 @@ const Navbar = ({ activePage, onToggleSidebar, onOpenQuickAdd, onSelectTransacti
           <RefreshCw className="w-4 h-4" />
         </button>
 
-        {/* Notification Bell */}
-        <div className="relative">
-          <button
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors relative"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-600 rounded-full animate-ping"></span>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-600 rounded-full"></span>
-          </button>
-        </div>
+
 
         {/* User Profile avatar & Logout */}
         <div className="flex items-center gap-3 pl-2 border-l border-slate-200">

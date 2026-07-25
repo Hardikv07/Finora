@@ -10,6 +10,14 @@ const { aggregateData } = require('../services/copilot/dataAggregator');
 const { buildPrompt } = require('../services/copilot/promptBuilder');
 const { generateCopilotResponse } = require('../services/copilot/geminiCopilot');
 
+// ─── Startup Check ────────────────────────────────────────────────────────────
+// Warn at module load time — visible immediately when the server starts
+if (!process.env.GEMINI_API_KEY) {
+  console.error('[Copilot] ❌ CRITICAL: GEMINI_API_KEY is not set in .env. Copilot will return fallback responses.');
+} else {
+  console.log('[Copilot] ✅ GEMINI_API_KEY loaded successfully.');
+}
+
 /**
  * POST /api/copilot/chat
  */
@@ -61,12 +69,20 @@ const chat = async (req, res) => {
     // 5. Generate explanation via Gemini
     let geminiResponse;
     try {
+      console.log(`[Copilot] Step 5: Calling Gemini...`);
       geminiResponse = await generateCopilotResponse(systemPrompt);
+      console.log(`[Copilot] Step 5: Gemini responded.`);
     } catch (aiErr) {
-      console.error('[Copilot] Gemini call failed:', aiErr.message);
-      // Graceful fallback: return a helpful message based on aggregated data
+      // Log the FULL error so developers can see the real reason in server logs
+      console.error('[Copilot] ❌ Gemini call failed:', aiErr.message);
+
+      // Return a graceful fallback with the SPECIFIC error reason embedded
+      // so developers can diagnose from the frontend without checking logs
+      const isDev = process.env.NODE_ENV !== 'production';
       return res.status(200).json({
-        answer: buildFallbackAnswer(intent, context),
+        answer: isDev
+          ? `AI engine error: ${aiErr.message}`
+          : buildFallbackAnswer(intent, context),
         cards: buildFallbackCards(context),
         charts,
         followUps: ['Compare with last month', 'Show budget status', 'View my goals'],

@@ -192,7 +192,7 @@ const classifyWithGemini = async (message) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { intent: INTENTS.GENERAL_FINANCE, confidence: 50 };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
 
   const intentList = Object.values(INTENTS).join(', ');
   const prompt = `You are a financial intent classifier. Classify this user message into exactly one of these intents: ${intentList}

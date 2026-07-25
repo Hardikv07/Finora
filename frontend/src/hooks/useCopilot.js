@@ -58,12 +58,31 @@ export const useCopilot = () => {
         { role: 'assistant', content: response.answer },
       ].slice(-8);
     } catch (err) {
+      // Classify the error for a user-appropriate message
+      const msg = err.message || '';
+      let displayMessage;
+
+      if (msg.includes('Not authenticated') || msg.includes('No Token') || msg.includes('Invalid Token')) {
+        displayMessage = 'Please log in to use Finora Copilot.';
+      } else if (msg.includes('quota') || msg.includes('rate limit') || msg.includes('429')) {
+        displayMessage = 'The AI service is temporarily rate-limited. Please wait a moment and try again.';
+      } else if (msg.includes('API key') || msg.includes('401') || msg.includes('403')) {
+        displayMessage = 'AI engine configuration error. Please contact support.';
+      } else if (msg.includes('timed out') || msg.includes('AbortError') || msg.includes('timeout')) {
+        displayMessage = 'The request timed out. Your connection may be slow — please try again.';
+      } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ECONNREFUSED')) {
+        displayMessage = 'Cannot reach the backend server. Please ensure it is running on port 7777.';
+      } else if (msg.includes('AI engine error:')) {
+        // Dev-mode error: the backend surfaced the specific Gemini error — show it directly
+        displayMessage = msg;
+      } else {
+        displayMessage = 'Something went wrong. Please try again in a moment.';
+      }
+
       const errorMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: err.message?.includes('Not authenticated')
-          ? 'Please log in to use Finora Copilot.'
-          : 'I encountered an issue reaching the AI engine. Please check that the backend server is running and try again.',
+        content: displayMessage,
         cards: [],
         charts: [],
         followUps: ['Try again', 'Ask a different question'],
@@ -71,7 +90,7 @@ export const useCopilot = () => {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
-      setError(err.message);
+      setError(msg);
     } finally {
       setIsLoading(false);
     }

@@ -29,15 +29,16 @@ const AuthPage = ({ onLogin }) => {
     clearMessages();
 
     try {
-      const response = await fetch('http://localhost:7777/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-        credentials: 'omit' // Switch to 'include' for secure cross-origin cookies in production
+        credentials: 'include', // Accept the httpOnly JWT cookie from the backend
       });
       const data = await response.json();
 
       if (response.ok) {
+        // Store token in localStorage so api.js can attach it as Authorization: Bearer
         localStorage.setItem('finora_auth_token', data.token);
         localStorage.setItem('finora_user', JSON.stringify(data.user));
         onLogin(data.user);
@@ -45,7 +46,7 @@ const AuthPage = ({ onLogin }) => {
         setError(data.message || 'Login failed.');
       }
     } catch (err) {
-      setError('Network error. Is the backend running?');
+      setError('Network error. Is the backend running on port 7777?');
     } finally {
       setLoading(false);
     }
@@ -57,10 +58,11 @@ const AuthPage = ({ onLogin }) => {
     clearMessages();
 
     try {
-      const response = await fetch('http://localhost:7777/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
+        body: JSON.stringify({ name, email, password }),
+        credentials: 'include',
       });
       const data = await response.json();
 
@@ -94,7 +96,7 @@ const AuthPage = ({ onLogin }) => {
     }, 300);
 
     try {
-      const response = await fetch('http://localhost:7777/api/auth/forgotpassword', {
+      const response = await fetch('/api/auth/forgotpassword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -137,10 +139,11 @@ const AuthPage = ({ onLogin }) => {
     clearMessages();
 
     try {
-      const response = await fetch('http://localhost:7777/api/auth/resetpassword', {
+      const response = await fetch('/api/auth/resetpassword', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp, newPassword: password })
+        body: JSON.stringify({ email, otp, newPassword: password }),
+        credentials: 'include',
       });
       const data = await response.json();
 

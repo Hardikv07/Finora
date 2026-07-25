@@ -13,7 +13,6 @@ const billRoutes = require("./routes/billRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const timelineRoutes = require("./routes/timelineRoutes");
-const reportRoutes = require("./routes/reportRoutes");
 const searchRoutes = require("./routes/searchRoutes");
 const copilotRoutes = require("./routes/copilotRoutes");
 const cookieParser = require("cookie-parser");
@@ -43,7 +42,6 @@ app.use("/api/bills", billRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/timeline", timelineRoutes);
-app.use("/api/reports", reportRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/copilot", copilotRoutes);
 

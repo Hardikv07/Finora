@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Filter, Download, FileUp, Search, X } from 'lucide-react';
+import { Plus, Filter, FileUp, Search, X } from 'lucide-react';
 import { useFinanceData } from '../hooks/useFinanceData';
 import { useDebounce } from '../hooks/useDebounce';
 import Button from '../components/common/Button';
@@ -9,7 +9,7 @@ import TransactionFormModal from '../components/transactions/TransactionFormModa
 import BillImportModal from '../components/transactions/BillImportModal';
 
 /**
- * Transactions Page with search, filters, sorting, and export controls
+ * Transactions Page with search, filters, and sorting controls
  */
 const TransactionsPage = ({ defaultSearchQuery = '', onClearSearch }) => {
   const { transactions, deleteTransaction } = useFinanceData();
@@ -88,20 +88,6 @@ const TransactionsPage = ({ defaultSearchQuery = '', onClearSearch }) => {
     setModalOpen(true);
   };
 
-  const handleExportCSV = () => {
-    const headers = ['ID,Type,Date,Merchant,Category,Amount,PaymentMethod,Notes\n'];
-    const rows = filteredTransactions.map((t) =>
-      `"${t._id}","${t.type}","${t.date}","${t.merchant || ''}","${t.category || ''}",${t.amount},"${t.paymentMethod || ''}","${t.notes || ''}"`
-    );
-    const csvContent = 'data:text/csv;charset=utf-8,' + headers + rows.join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `finora_transactions_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -109,13 +95,10 @@ const TransactionsPage = ({ defaultSearchQuery = '', onClearSearch }) => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Financial Ledger</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Manage, filter, search, and export your transaction records</p>
+          <p className="text-xs text-slate-500 mt-0.5">Manage, filter, and search your transaction records</p>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Button variant="outline" size="sm" icon={Download} onClick={handleExportCSV}>
-            Export CSV
-          </Button>
           <Button variant="outline" size="sm" icon={FileUp} onClick={() => setBillImportOpen(true)}>
             Import Bill
           </Button>
