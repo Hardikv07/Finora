@@ -2,30 +2,37 @@ import React, { useState } from 'react';
 import { Plus, ArrowLeftRight, Landmark, CreditCard } from 'lucide-react';
 import { useFinanceData } from '../hooks/useFinanceData';
 import { formatCurrency } from '../utils/formatters';
-import Button from '../components/common/Button';
 import WalletCards from '../components/wallets/WalletCards';
 import WalletFormModal from '../components/wallets/WalletFormModal';
 import TransferModal from '../components/wallets/TransferModal';
+import Button from '../components/common/Button';
 
 /**
- * Wallets & Accounts Management Page
+ * Wallets & Accounts Management Page in crisp Dark Palette
  */
 const WalletsPage = () => {
-  const { wallets, deleteWallet, selectedCurrency } = useFinanceData();
+  const { wallets, selectedCurrency } = useFinanceData();
+
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [selectedTransferWalletId, setSelectedTransferWalletId] = useState(null);
+  const [editingWallet, setEditingWallet] = useState(null);
+  const [transferFromWallet, setTransferFromWallet] = useState(null);
 
   const totalNetWorth = wallets.reduce((acc, w) => acc + (Number(w.balance) || 0), 0);
   const liquidCash = wallets
-    .filter((w) => w.type !== 'credit_card')
+    .filter((w) => w.type !== 'Credit Card')
     .reduce((acc, w) => acc + (Number(w.balance) || 0), 0);
   const creditDebt = wallets
-    .filter((w) => w.type === 'credit_card' && w.balance < 0)
+    .filter((w) => w.type === 'Credit Card' && w.balance < 0)
     .reduce((acc, w) => acc + Math.abs(Number(w.balance) || 0), 0);
 
-  const handleOpenTransfer = (walletId = null) => {
-    setSelectedTransferWalletId(walletId);
+  const handleOpenEdit = (w) => {
+    setEditingWallet(w);
+    setWalletModalOpen(true);
+  };
+
+  const handleOpenTransfer = (w) => {
+    setTransferFromWallet(w);
     setTransferModalOpen(true);
   };
 
@@ -34,8 +41,8 @@ const WalletsPage = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-slate-900 tracking-tight">Wallets & Bank Accounts</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Track balances, credit lines, digital pockets, and perform transfers</p>
+          <h2 className="text-2xl font-black text-white tracking-tight">Wallets & Bank Accounts</h2>
+          <p className="text-xs text-slate-400 mt-0.5 font-medium">Track balances, credit lines, digital pockets, and perform transfers</p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -47,7 +54,7 @@ const WalletsPage = () => {
           >
             Transfer Funds
           </Button>
-          <Button variant="primary" size="sm" icon={Plus} onClick={() => setWalletModalOpen(true)}>
+          <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditingWallet(null); setWalletModalOpen(true); }}>
             Add Account
           </Button>
         </div>
@@ -55,51 +62,57 @@ const WalletsPage = () => {
 
       {/* Net Worth Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-        <div className="glass-card rounded-2xl p-5 bg-gradient-to-br from-indigo-900 to-slate-900 text-white shadow-lg">
-          <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider block">
+        <div className="glass-card rounded-2xl p-5 bg-gradient-to-br from-[#1c1c22] to-[#25252e] border-[#2e2e36] text-white shadow-lg">
+          <span className="text-xs font-bold text-[#ea9d85] uppercase tracking-wider block">
             Combined Net Worth
           </span>
-          <p className="text-2xl sm:text-3xl font-black mt-2">
+          <p className="text-2xl sm:text-3xl font-black mt-2 text-white">
             {formatCurrency(totalNetWorth, selectedCurrency)}
           </p>
           <span className="text-[11px] text-slate-400 mt-1 block">Across {wallets.length} active wallets</span>
         </div>
 
-        <div className="glass-card rounded-2xl p-5 border-emerald-100/80">
+        <div className="glass-card rounded-2xl p-5 border-[#2e2e36]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Liquid Assets</span>
-            <Landmark className="w-5 h-5 text-emerald-600" />
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Liquid Assets</span>
+            <Landmark className="w-5 h-5 text-[#86c8a7]" />
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+          <p className="text-2xl sm:text-3xl font-black text-white mt-2">
             {formatCurrency(liquidCash, selectedCurrency)}
           </p>
-          <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">Ready for immediate disbursement</span>
+          <span className="text-[11px] text-[#86c8a7] font-semibold mt-1 block">Ready for immediate disbursement</span>
         </div>
 
-        <div className="glass-card rounded-2xl p-5 border-rose-100/80">
+        <div className="glass-card rounded-2xl p-5 border-[#2e2e36]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Credit Card Outstanding</span>
-            <CreditCard className="w-5 h-5 text-rose-600" />
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Credit Liability</span>
+            <CreditCard className="w-5 h-5 text-rose-400" />
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-rose-600 mt-2">
+          <p className="text-2xl sm:text-3xl font-black text-rose-400 mt-2">
             {formatCurrency(creditDebt, selectedCurrency)}
           </p>
-          <span className="text-[11px] text-slate-400 font-medium mt-1 block">Scheduled for auto-debit</span>
+          <span className="text-[11px] text-slate-400 font-medium mt-1 block">Outstanding credit card balance</span>
         </div>
       </div>
 
-      {/* Wallet Cards Grid */}
-      <div>
-        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Active Wallets</h3>
-        <WalletCards onTransfer={handleOpenTransfer} onDelete={deleteWallet} />
-      </div>
+      {/* Main Wallets List */}
+      <WalletCards
+        onEdit={handleOpenEdit}
+        onTransfer={handleOpenTransfer}
+      />
 
-      {/* Modals */}
-      <WalletFormModal isOpen={walletModalOpen} onClose={() => setWalletModalOpen(false)} />
+      {/* Wallet Modal */}
+      <WalletFormModal
+        isOpen={walletModalOpen}
+        onClose={() => setWalletModalOpen(false)}
+        initialData={editingWallet}
+      />
+
+      {/* Transfer Funds Modal */}
       <TransferModal
         isOpen={transferModalOpen}
         onClose={() => setTransferModalOpen(false)}
-        initialFromWalletId={selectedTransferWalletId}
+        initialFromWallet={transferFromWallet}
       />
     </div>
   );

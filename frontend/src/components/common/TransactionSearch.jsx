@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Loader2, X } from 'lucide-react';
 import { apiService } from '../../services/api';
 
@@ -30,7 +30,7 @@ const TransactionSearch = ({ onSelectTransaction, onSearchTermSelect }) => {
         setSuggestions(results);
         setMatchedTransactions(txResults || []);
         setIsOpen(true);
-        setSelectedIndex(-1); // reset selection
+        setSelectedIndex(-1);
       } catch (error) {
         console.error("Search error", error);
       } finally {
@@ -104,41 +104,53 @@ const TransactionSearch = ({ onSelectTransaction, onSearchTermSelect }) => {
     setIsOpen(false);
   };
 
-  // Helper to highlight matching prefix
+  // Utility function for text highlighting
   const renderHighlightedText = (text, highlight) => {
     if (!highlight.trim()) return text;
-    
-    const regex = new RegExp(`(${highlight})`, 'gi');
-    const parts = text.split(regex);
-    
-    return parts.map((part, i) => 
-      regex.test(part) ? <span key={i} className="font-bold text-indigo-600 dark:text-indigo-400">{part}</span> : <span key={i}>{part}</span>
+    const parts = text.split(new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) =>
+          part.toLowerCase() === highlight.toLowerCase() ? (
+            <mark key={i} className="bg-amber-400 text-slate-950 rounded px-0.5 font-bold">
+              {part}
+            </mark>
+          ) : (
+            part
+          )
+        )}
+      </span>
     );
   };
 
   return (
-    <div className="relative w-full max-w-md" ref={wrapperRef}>
+    <div ref={wrapperRef} className="relative w-full max-w-sm">
       <div className="relative flex items-center">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
           {loading ? (
-            <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin text-[#d96b43]" />
           ) : (
-            <Search className="h-5 w-5 text-gray-400" />
+            <Search className="h-4 w-4" />
           )}
         </div>
         <input
           type="text"
-          className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-shadow shadow-sm"
-          placeholder="Search transactions, merchants, tags..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => {
+            if (query.trim() && (suggestions.length > 0 || matchedTransactions.length > 0)) {
+              setIsOpen(true);
+            }
+          }}
           onKeyDown={handleKeyDown}
-          onFocus={() => { if (query) setIsOpen(true) }}
+          placeholder="Search transactions, tags, categories..."
+          className="w-full pl-9 pr-8 py-2 bg-[#1c1c22] border border-[#2e2e36] rounded-xl text-xs font-semibold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#d96b43]/40 focus:border-[#d96b43] transition-all shadow-sm"
         />
         {query && (
           <button
+            type="button"
             onClick={clearSearch}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 text-gray-400"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-white text-slate-400"
           >
             <X className="h-4 w-4" />
           </button>
@@ -147,13 +159,12 @@ const TransactionSearch = ({ onSelectTransaction, onSearchTermSelect }) => {
 
       {/* Dropdown Menu */}
       {isOpen && query.trim() !== '' && (
-        <div className="absolute mt-1 w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg z-50 ring-1 ring-black ring-opacity-5 overflow-hidden border dark:border-gray-700 transition-all duration-200 p-1.5">
-          <div className="max-h-80 overflow-auto text-base sm:text-sm">
-            
+        <div className="absolute mt-1 w-full bg-[#1c1c22] rounded-xl shadow-2xl z-50 border border-[#2e2e36] transition-all duration-200 p-1.5">
+          <div className="max-h-80 overflow-auto text-xs">
             {/* Section 1: Suggestions */}
             {suggestions.length > 0 && (
               <div className="py-1">
-                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Search Keywords</div>
+                <div className="px-3 py-1 text-[10px] font-bold text-[#ea9d85] uppercase tracking-wider">Search Keywords</div>
                 {suggestions.map((suggestion, index) => {
                   const isCurrent = index === selectedIndex;
                   return (
@@ -163,12 +174,12 @@ const TransactionSearch = ({ onSelectTransaction, onSearchTermSelect }) => {
                       onMouseEnter={() => setSelectedIndex(index)}
                       className={`cursor-pointer select-none relative py-1.5 pl-3 pr-9 rounded-lg transition-colors ${
                         isCurrent 
-                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' 
-                          : 'text-gray-900 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                          ? 'bg-[#3b231c] text-[#ea9d85] font-bold border border-[#543025]' 
+                          : 'text-white hover:bg-[#25252e]'
                       }`}
                     >
                       <div className="flex items-center text-xs">
-                        <Search className="h-3 w-3 mr-2 text-gray-400" />
+                        <Search className="h-3 w-3 mr-2 text-slate-400" />
                         <span className="block truncate">
                           {renderHighlightedText(suggestion, query)}
                         </span>
@@ -178,11 +189,11 @@ const TransactionSearch = ({ onSelectTransaction, onSearchTermSelect }) => {
                 })}
               </div>
             )}
- 
+
             {/* Section 2: Transactions */}
             {matchedTransactions.length > 0 && (
-              <div className="py-1 border-t border-slate-100 dark:border-gray-700/50 mt-1 pt-1.5">
-                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Matching Transactions</div>
+              <div className="py-1 border-t border-[#2e2e36] mt-1 pt-1.5">
+                <div className="px-3 py-1 text-[10px] font-bold text-[#ea9d85] uppercase tracking-wider">Matching Transactions</div>
                 {matchedTransactions.map((tx, index) => {
                   const adjustedIndex = index + suggestions.length;
                   const isCurrent = adjustedIndex === selectedIndex;
@@ -194,18 +205,18 @@ const TransactionSearch = ({ onSelectTransaction, onSearchTermSelect }) => {
                       onMouseEnter={() => setSelectedIndex(adjustedIndex)}
                       className={`cursor-pointer select-none relative py-1.5 px-3 rounded-lg transition-colors flex items-center justify-between gap-2 ${
                         isCurrent 
-                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' 
-                          : 'text-gray-900 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                          ? 'bg-[#3b231c] text-white font-bold border border-[#543025]' 
+                          : 'text-white hover:bg-[#25252e]'
                       }`}
                     >
                       <div className="flex items-center min-w-0">
                         <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mr-2 text-[10px] font-bold ${
-                          isIncome ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                          isIncome ? 'bg-[#1d2622] text-[#86c8a7]' : 'bg-[#2b1c1d] text-[#f87171]'
                         }`}>
                           {isIncome ? '+' : '-'}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-xs truncate text-slate-800 dark:text-slate-200">
+                          <p className="font-bold text-xs truncate text-white">
                             {renderHighlightedText(tx.merchant || 'General Entry', query)}
                           </p>
                           <p className="text-[9px] text-slate-400 capitalize">
@@ -213,7 +224,7 @@ const TransactionSearch = ({ onSelectTransaction, onSearchTermSelect }) => {
                           </p>
                         </div>
                       </div>
-                      <span className={`text-xs font-black shrink-0 ${isIncome ? 'text-emerald-600' : 'text-slate-900 dark:text-slate-100'}`}>
+                      <span className={`text-xs font-black shrink-0 ${isIncome ? 'text-[#86c8a7]' : 'text-[#f87171]'}`}>
                         ₹{tx.amount?.toLocaleString()}
                       </span>
                     </div>
@@ -221,9 +232,9 @@ const TransactionSearch = ({ onSelectTransaction, onSearchTermSelect }) => {
                 })}
               </div>
             )}
- 
+
             {suggestions.length === 0 && matchedTransactions.length === 0 && !loading && (
-              <div className="text-gray-500 dark:text-gray-400 cursor-default select-none relative py-6 text-center italic text-xs">
+              <div className="text-slate-400 cursor-default select-none relative py-6 text-center italic text-xs font-medium">
                 No matching keywords or transactions
               </div>
             )}

@@ -6,7 +6,7 @@
  * Surfaces specific, actionable error messages instead of generic failures.
  */
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

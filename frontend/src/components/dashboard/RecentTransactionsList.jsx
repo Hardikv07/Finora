@@ -2,52 +2,51 @@ import React from 'react';
 import { ArrowUpRight, ArrowDownRight, ArrowRight, Receipt } from 'lucide-react';
 import { useFinanceData } from '../../hooks/useFinanceData';
 import { formatCurrency, formatRelativeTime } from '../../utils/formatters';
-import Card from '../common/Card';
 
 /**
- * Recent Transactions summary table/list for Dashboard
+ * Recent Transactions summary table for Dashboard in High-Contrast Dark Theme
  */
 const RecentTransactionsList = ({ onViewAll }) => {
   const { transactions, selectedCurrency } = useFinanceData();
-
   const recent = transactions.slice(0, 6);
 
   return (
-    <Card
-      title="Recent Activity"
-      subtitle="Latest incoming & outgoing financial entries"
-      actions={
+    <div className="glass-card overflow-hidden p-5">
+      <div className="flex items-center justify-between pb-4 border-b border-[#2e2e36]">
+        <div>
+          <h3 className="font-bold text-white text-base">Recent Activity</h3>
+          <p className="text-xs text-slate-400 font-medium">Latest incoming & outgoing financial entries</p>
+        </div>
         <button
           onClick={onViewAll}
-          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors"
+          className="text-xs font-bold text-[#ea9d85] hover:text-[#d96b43] flex items-center gap-1 transition-colors"
         >
           <span>View all</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
-      }
-      bodyClassName="p-0"
-    >
+      </div>
+
       {recent.length === 0 ? (
-        <div className="p-8 text-center text-slate-500">
-          <p className="text-sm font-medium">No recent transactions found.</p>
+        <div className="p-8 text-center text-slate-400">
+          <p className="text-sm font-semibold text-white">No recent transactions found.</p>
           <p className="text-xs text-slate-400 mt-1">Use quick actions to record your first entry.</p>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100/80">
+        <div className="divide-y divide-[#26262e]">
           {recent.map((tx) => {
-            const isIncome = tx.type === 'income';
+            const isIncome = tx.type?.toLowerCase() === 'income';
             return (
               <div
                 key={tx._id}
-                className="p-4 sm:px-6 flex items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors"
+                className="py-3.5 flex items-center justify-between gap-4 hover:bg-[#202028] transition-colors rounded-xl px-2"
               >
                 {/* Icon + Title + Category */}
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold ${
                       isIncome
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-rose-100 text-rose-700'
+                        ? 'bg-[#1d2622] text-[#86c8a7] border border-[#293d33]'
+                        : 'bg-[#2b1c1d] text-[#f87171] border border-[#422325]'
                     }`}
                   >
                     {isIncome ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
@@ -55,13 +54,13 @@ const RecentTransactionsList = ({ onViewAll }) => {
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-slate-800 truncate">{tx.merchant || 'Untitled Entry'}</h4>
+                      <h4 className="text-sm font-bold text-white truncate">{tx.merchant || 'Untitled Entry'}</h4>
                       {tx.hasReceipt && (
-                        <Receipt className="w-3.5 h-3.5 text-slate-400 shrink-0" title="Receipt Attached" />
+                        <Receipt className="w-3.5 h-3.5 text-[#ea9d85] shrink-0" title="Receipt Attached" />
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                      <span className="font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 font-medium">
+                      <span className="font-bold px-2 py-0.5 rounded-md bg-[#24242c] text-white border border-[#383844]">
                         {tx.category || 'General'}
                       </span>
                       <span>•</span>
@@ -74,20 +73,20 @@ const RecentTransactionsList = ({ onViewAll }) => {
                 <div className="text-right shrink-0">
                   <p
                     className={`text-sm sm:text-base font-black ${
-                      isIncome ? 'text-emerald-600' : 'text-slate-900'
+                      isIncome ? 'text-[#86c8a7]' : 'text-[#f87171]'
                     }`}
                   >
                     {isIncome ? '+' : '-'}
                     {formatCurrency(tx.amount, selectedCurrency)}
                   </p>
-                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">{tx.paymentMethod || 'Wallet'}</p>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">{tx.paymentMethod || 'Digital Wallet'}</p>
                 </div>
               </div>
             );
           })}
         </div>
       )}
-    </Card>
+    </div>
   );
 };
 

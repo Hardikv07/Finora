@@ -1,25 +1,31 @@
+import { convertAmount } from './currencyConverter';
+
 /**
  * Formats a numeric amount into currency representation (e.g. ₹1,60,000 or $1,200.00)
- * @param {number} amount - The numeric figure to format
+ * Automatically converts from INR to the target currency using live exchange rates.
+ * @param {number} amount - The numeric figure (always stored in INR in our DB)
  * @param {string} currencyCode - INR, USD, EUR, GBP
- * @returns {string} Formatted currency string
+ * @returns {string} Formatted currency string with converted value
  */
 export const formatCurrency = (amount = 0, currencyCode = 'INR') => {
-  const num = Number(amount) || 0;
+  const rawNum = Number(amount) || 0;
+
+  // Convert from INR to target currency
+  const convertedNum = convertAmount(rawNum, currencyCode);
   
   if (currencyCode === 'INR') {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0
-    }).format(num);
+    }).format(convertedNum);
   }
 
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currencyCode || 'USD',
     maximumFractionDigits: 2
-  }).format(num);
+  }).format(convertedNum);
 };
 
 /**

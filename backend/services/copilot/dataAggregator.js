@@ -361,6 +361,7 @@ const aggregateData = async (intent, userId, entities = {}) => {
     case INTENTS.MONTHLY_REPORT:       return aggregateMonthlyReport(userId);
     case INTENTS.PREDICT_BALANCE:      return aggregatePredictBalance(userId);
     case INTENTS.ANOMALY_DETECTION:    return aggregateAnomalies(userId);
+    case INTENTS.SEARCH_TRANSACTIONS:  return aggregateMonthlyReport(userId);
     default:                           return aggregateMonthlyReport(userId);
   }
 };

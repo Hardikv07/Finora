@@ -6,53 +6,54 @@ import { calculateCashFlow } from '../../utils/calculations';
 import Tooltip from '../common/Tooltip';
 
 /**
- * 4 Metric Stat Cards with percentage comparison pills
+ * Category Stat Cards styled exactly like the reference UI's capsule cards (Peach, Mint, Lavender, Pastel Blue)
  */
 const StatCards = () => {
   const { wallets, transactions, selectedCurrency } = useFinanceData();
 
-  // Calculate Net Worth from wallets
   const totalBalance = wallets.reduce((acc, w) => acc + (Number(w.balance) || 0), 0);
-
-  // Calculate cash flow from transactions
   const { totalIncome, totalExpense, netSavings, savingsRate } = calculateCashFlow(transactions);
 
   const stats = [
     {
-      title: 'Total Balance (Net Worth)',
+      title: 'Total Net Worth',
       amount: totalBalance,
       change: '+14.2%',
       isPositive: true,
       icon: Wallet,
-      color: 'from-blue-600 to-indigo-600',
+      pillBg: 'bg-[#ea9d85] text-slate-950',
+      glow: 'shadow-[#ea9d85]/20',
       tooltip: 'Combined liquid balance across all your bank accounts, credit cards, and wallets.'
     },
     {
-      title: 'Monthly Total Income',
+      title: 'Monthly Income',
       amount: totalIncome,
       change: '+8.4%',
       isPositive: true,
       icon: TrendingUp,
-      color: 'from-emerald-600 to-teal-600',
+      pillBg: 'bg-[#86c8a7] text-slate-950',
+      glow: 'shadow-[#86c8a7]/20',
       tooltip: 'Aggregate earnings from salary, freelance projects, and dividends.'
     },
     {
-      title: 'Monthly Total Expenses',
+      title: 'Monthly Expenses',
       amount: totalExpense,
       change: '-3.1%',
       isPositive: false,
       icon: TrendingDown,
-      color: 'from-red-600 to-rose-600',
+      pillBg: 'bg-[#b09cec] text-slate-950',
+      glow: 'shadow-[#b09cec]/20',
       tooltip: 'Sum of outgoing spendings including rent, subscriptions, dining, and bills.'
     },
     {
-      title: 'Net Monthly Savings',
+      title: 'Net Savings',
       amount: netSavings,
       change: `${savingsRate}% rate`,
       isPositive: netSavings >= 0,
       icon: PiggyBank,
-      color: 'from-purple-600 to-violet-600',
-      tooltip: 'Surplus cash remaining after all expenses (`Total Income - Total Expense`).'
+      pillBg: 'bg-[#93b4ed] text-slate-950',
+      glow: 'shadow-[#93b4ed]/20',
+      tooltip: 'Surplus cash remaining after all expenses (Income - Expenses).'
     }
   ];
 
@@ -63,37 +64,36 @@ const StatCards = () => {
         return (
           <div
             key={idx}
-            className="glass-card rounded-2xl p-5 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300"
+            className="category-capsule-card group hover:-translate-y-1 transition-all duration-300"
           >
-            {/* Subtle background glow */}
-            <div className={`absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-gradient-to-tr ${stat.color} opacity-10 blur-xl group-hover:opacity-20 transition-opacity`} />
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{stat.title}</span>
-                <Tooltip content={stat.tooltip} />
-              </div>
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${stat.color} flex items-center justify-center text-white shadow-md shrink-0`}>
-                <Icon className="w-5 h-5" />
-              </div>
+            {/* Top Pastel Capsule Header (Matching image category cards) */}
+            <div className={`w-full py-6 rounded-2xl ${stat.pillBg} flex items-center justify-center shadow-md ${stat.glow} transition-transform group-hover:scale-[1.02]`}>
+              <Icon className="w-8 h-8" />
             </div>
 
-            <div className="mt-3 flex items-baseline justify-between gap-2">
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            {/* Title & Amount Container */}
+            <div className="w-full mt-4 text-center">
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{stat.title}</span>
+                <Tooltip content={stat.tooltip} />
+              </div>
+              
+              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 {formatCurrency(stat.amount, selectedCurrency)}
               </h2>
             </div>
 
-            <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full ${
+            {/* Bottom Change Indicator */}
+            <div className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold">
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-lg border ${
                 stat.isPositive
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-rose-100 text-rose-800'
+                  ? 'bg-[#1d2622] text-[#86c8a7] border-[#293d33]'
+                  : 'bg-[#2b1c1d] text-[#f87171] border-[#422325]'
               }`}>
                 {stat.isPositive ? <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" /> : <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" />}
                 {stat.change}
               </span>
-              <span className="text-slate-400">vs last period</span>
+              <span className="text-slate-500">vs last month</span>
             </div>
           </div>
         );

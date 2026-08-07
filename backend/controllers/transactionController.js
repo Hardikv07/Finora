@@ -6,6 +6,7 @@ const { evaluateBudgetAlerts } = require("../utils/budgetEvaluation");
 const { processGoalAutoContributions } = require("../utils/goalEvaluation");
 const searchService = require("../services/searchService");
 const geminiService = require("../services/geminiService");
+const { generateAndStoreEmbedding } = require("../services/embeddingService");
  
 /**
  * @desc    Create new Income or Expense transaction with optional receipt URL
@@ -58,6 +59,11 @@ const createTransaction = async (req, res) => {
  
         // Update Search Trie
         await searchService.addTransaction(req.user._id, transaction);
+
+        // Generate RAG vector embedding asynchronously
+        generateAndStoreEmbedding(transaction).catch(err => {
+            console.error("Async RAG embedding generation error on create:", err.message);
+        });
 
         return res.status(201).json({
             message: "Transaction created successfully and wallet balance synced!",
@@ -155,6 +161,11 @@ const updateTransaction = async (req, res) => {
         if (newWalletId !== oldWalletId) {
             await recalculateWalletBalance(newWalletId);
         }
+
+        // Regenerate RAG vector embedding asynchronously
+        generateAndStoreEmbedding(transaction).catch(err => {
+            console.error("Async RAG embedding generation error on update:", err.message);
+        });
  
         return res.status(200).json({
             message: "Transaction updated and wallet balances synchronized!",

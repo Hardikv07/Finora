@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
 import { useToast } from './useToast';
+import { fetchExchangeRates, getCachedRates } from '../utils/currencyConverter';
 
 const FinanceContext = createContext(null);
 
@@ -15,6 +16,19 @@ export const FinanceProvider = ({ children }) => {
   const [recurring, setRecurring] = useState([]);
   const [bills, setBills] = useState([]);
   const [selectedCurrency, setSelectedCurrency] = useState('INR');
+  const [exchangeRates, setExchangeRates] = useState(getCachedRates());
+
+  // Fetch live exchange rates on mount
+  useEffect(() => {
+    fetchExchangeRates().then((rates) => setExchangeRates(rates));
+  }, []);
+
+  // Re-trigger a rate refresh when currency changes (uses cache if fresh)
+  useEffect(() => {
+    if (selectedCurrency !== 'INR') {
+      fetchExchangeRates().then((rates) => setExchangeRates(rates));
+    }
+  }, [selectedCurrency]);
 
   // Load initial data
   const refreshAllData = useCallback(async (showLoader = false) => {
@@ -235,6 +249,7 @@ export const FinanceProvider = ({ children }) => {
         bills,
         selectedCurrency,
         setSelectedCurrency,
+        exchangeRates,
         refreshAllData,
         addTransaction,
         deleteTransaction,

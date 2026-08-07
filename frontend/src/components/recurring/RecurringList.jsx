@@ -1,74 +1,52 @@
 import React from 'react';
-import { Repeat, ArrowUpRight, ArrowDownRight, Trash2, Calendar, CheckCircle2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Calendar, CheckCircle2, Trash2 } from 'lucide-react';
 import { useFinanceData } from '../../hooks/useFinanceData';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import Card from '../common/Card';
 
 /**
- * Recurring Subscriptions & Automatic Salaries List
+ * Recurring Transactions List in High-Contrast Dark Theme
  */
 const RecurringList = ({ onDelete }) => {
   const { recurring, wallets, selectedCurrency } = useFinanceData();
 
   if (recurring.length === 0) {
     return (
-      <Card bodyClassName="p-12 text-center text-slate-500">
-        <Repeat className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-        <h3 className="font-bold text-slate-800 text-lg">No Recurring Entries</h3>
-        <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-          Automate fixed monthly expenses (rent, subscriptions, internet) or monthly salary deposits.
-        </p>
-      </Card>
+      <div className="glass-card p-12 text-center text-slate-400">
+        <p className="font-bold text-lg text-white">No recurring schedules active.</p>
+        <p className="text-xs text-slate-400 mt-1">Automate your monthly subscriptions, salary, and utility bill debits.</p>
+      </div>
     );
   }
 
-  const totalRecurringExpense = recurring
-    .filter((r) => r.type === 'expense')
-    .reduce((acc, r) => acc + Number(r.amount || 0), 0);
-
   return (
-    <div className="space-y-6">
-      {/* Overview Banner */}
-      <div className="glass-card rounded-2xl p-5 bg-gradient-to-r from-indigo-900 to-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center shrink-0">
-            <Repeat className="w-6 h-6 text-indigo-400" />
-          </div>
-          <div>
-            <h3 className="font-bold text-base">Automated Ledger Engine Active</h3>
-            <p className="text-xs text-slate-300">
-              {recurring.length} automated rules scheduled to log exactly on their due dates.
-            </p>
-          </div>
+    <div className="glass-card overflow-hidden p-5">
+      <div className="flex items-center justify-between pb-4 border-b border-[#2e2e36]">
+        <div>
+          <h3 className="font-bold text-white text-base">Active Recurring Schedules</h3>
+          <p className="text-xs text-slate-400 font-medium">Automated debits & predictable monthly cash flow entries</p>
         </div>
-
-        <div className="text-right shrink-0">
-          <span className="text-[11px] text-indigo-300 font-semibold uppercase tracking-wider block">
-            Total Monthly Fixed Outflow
-          </span>
-          <span className="text-2xl font-black text-rose-400">
-            -{formatCurrency(totalRecurringExpense, selectedCurrency)}
-          </span>
-        </div>
+        <span className="text-xs font-bold text-[#ea9d85] px-2.5 py-1 rounded-full bg-[#3b231c] border border-[#543025]">
+          {recurring.length} Active
+        </span>
       </div>
 
-      {/* List Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="divide-y divide-[#26262e]">
         {recurring.map((item) => {
-          const isIncome = item.type === 'income';
-          const wallet = wallets.find((w) => w._id === item.walletId);
+          const isIncome = item.type?.toLowerCase() === 'income';
+          const wallet = wallets.find((w) => w._id === item.wallet);
 
           return (
             <div
               key={item._id}
-              className="glass-card rounded-2xl p-5 flex items-center justify-between gap-4 group transition-all hover:border-indigo-200"
+              className="py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 hover:bg-[#202028] transition-colors rounded-xl px-2"
             >
+              {/* Icon & Title Info */}
               <div className="flex items-center gap-3.5 min-w-0">
                 <div
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold ${
                     isIncome
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-rose-100 text-rose-700'
+                      ? 'bg-[#1d2622] text-[#86c8a7] border border-[#293d33]'
+                      : 'bg-[#2b1c1d] text-[#f87171] border border-[#422325]'
                   }`}
                 >
                   {isIncome ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
@@ -76,17 +54,17 @@ const RecurringList = ({ onDelete }) => {
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-slate-900 text-base truncate">{item.title}</h4>
+                    <h4 className="font-bold text-white text-base truncate">{item.title}</h4>
                     {item.autoProcess && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#3b231c] text-[#ea9d85] border border-[#543025]">
                         <CheckCircle2 className="w-2.5 h-2.5" />
                         Auto-Pay
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                    <span className="font-semibold text-slate-700">{item.category}</span>
+                  <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 font-medium">
+                    <span className="font-bold text-slate-200">{item.category}</span>
                     <span>•</span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-slate-400" />
@@ -94,32 +72,37 @@ const RecurringList = ({ onDelete }) => {
                     </span>
                   </div>
                   {wallet && (
-                    <p className="text-[11px] text-slate-400 mt-1 truncate">Linked to: {wallet.name}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 truncate font-medium">Linked to: {wallet.name}</p>
                   )}
                 </div>
               </div>
 
               {/* Amount & Delete */}
-              <div className="text-right shrink-0 flex flex-col items-end justify-between h-full">
+              <div className="text-right shrink-0 flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
                 <span
                   className={`font-black text-lg ${
-                    isIncome ? 'text-emerald-600' : 'text-slate-900'
+                    isIncome ? 'text-[#86c8a7]' : 'text-[#f87171]'
                   }`}
                 >
                   {isIncome ? '+' : '-'}
                   {formatCurrency(item.amount, selectedCurrency)}
                 </span>
-                <span className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
-                  {item.frequency || 'Monthly'}
-                </span>
-
-                <button
-                  onClick={() => onDelete(item._id)}
-                  className="mt-2 p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors opacity-80 group-hover:opacity-100"
-                  title="Cancel recurring entry"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider bg-[#24242c] px-2 py-0.5 rounded border border-[#383844]">
+                    {item.frequency || 'Monthly'}
+                  </span>
+                  
+                  {onDelete && (
+                    <button
+                      onClick={() => onDelete(item._id)}
+                      className="p-1 rounded text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      title="Cancel schedule"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );

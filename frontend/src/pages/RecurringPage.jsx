@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Repeat } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useFinanceData } from '../hooks/useFinanceData';
-import Button from '../components/common/Button';
 import RecurringList from '../components/recurring/RecurringList';
 import RecurringFormModal from '../components/recurring/RecurringFormModal';
+import Button from '../components/common/Button';
 
 /**
- * Recurring Subscriptions & Salaries Page
+ * Recurring Transactions & Bills Page in crisp Dark Palette
  */
 const RecurringPage = () => {
   const { deleteRecurring } = useFinanceData();
@@ -17,8 +17,8 @@ const RecurringPage = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-slate-900 tracking-tight">Recurring Schedules & Subscriptions</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Automate fixed salary deposits, streaming services, house rent, and recurring utility bills</p>
+          <h2 className="text-2xl font-black text-white tracking-tight">Recurring Schedules & Subscriptions</h2>
+          <p className="text-xs text-slate-400 mt-0.5 font-medium">Automate fixed salary deposits, streaming services, house rent, and recurring utility bills</p>
         </div>
 
         <Button variant="primary" size="sm" icon={Plus} onClick={() => setModalOpen(true)}>

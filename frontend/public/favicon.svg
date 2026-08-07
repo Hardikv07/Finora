@@ -1,0 +1,36 @@
+<svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="finoraGradPrimary" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#4F46E5" />
+      <stop offset="50%" stopColor="#6366F1" />
+      <stop offset="100%" stopColor="#10B981" />
+    </linearGradient>
+    <linearGradient id="finoraGradAccent" x1="44" y1="0" x2="0" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#38BDF8" />
+      <stop offset="100%" stopColor="#818CF8" />
+    </linearGradient>
+  </defs>
+
+  <rect x="2" y="2" width="40" height="40" rx="12" fill="url(#finoraGradPrimary)" />
+  <rect x="2" y="2" width="40" height="40" rx="12" fill="white" fillOpacity="0.08" />
+
+  <rect x="12" y="11" width="5.5" height="22" rx="2.75" fill="white" />
+  
+  <path 
+    d="M17.5 13.75H28.5C30.433 13.75 32 15.317 32 17.25C32 19.183 30.433 20.75 28.5 20.75H17.5V13.75Z" 
+    fill="white" 
+  />
+
+  <path 
+    d="M17.5 21.5H25C26.3807 21.5 27.5 22.6193 27.5 24C27.5 25.3807 26.3807 26.5 25 26.5H17.5V21.5Z" 
+    fill="url(#finoraGradAccent)" 
+  />
+
+  <path 
+    d="M29 11L33 7M33 7H29.5M33 7V10.5" 
+    stroke="#10B981" 
+    strokeWidth="2.5" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+  />
+</svg>

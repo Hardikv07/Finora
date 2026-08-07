@@ -2,14 +2,16 @@
  * CopilotSuggestions — Starter prompt chips displayed when the chat is empty
  */
 import React from 'react';
-import { TrendingUp, Target, CreditCard, AlertCircle, BarChart2, ShoppingBag, Repeat, Wallet } from 'lucide-react';
+import { TrendingUp, Target, CreditCard, AlertCircle, BarChart2, ShoppingBag, Repeat, Wallet, Search } from 'lucide-react';
 
 const SUGGESTIONS = [
+  { icon: Search,       text: 'Find all my Swiggy or Amazon purchases', color: 'indigo' },
   { icon: TrendingUp,   text: 'Compare this month with last month', color: 'indigo' },
   { icon: AlertCircle,  text: 'Why did I overspend this month?',     color: 'rose' },
   { icon: ShoppingBag,  text: 'Where am I spending the most money?', color: 'amber' },
   { icon: CreditCard,   text: 'Can I afford an iPhone worth ₹80,000?', color: 'blue' },
   { icon: Target,       text: 'How close am I to my savings goal?',  color: 'emerald' },
+  { icon: Search,       text: 'Show transactions over ₹5,000',      color: 'purple' },
   { icon: Repeat,       text: 'Which subscriptions cost me the most?', color: 'purple' },
   { icon: BarChart2,    text: 'Predict my balance at end of month',  color: 'cyan' },
   { icon: Wallet,       text: 'Which wallet do I use the least?',    color: 'slate' },

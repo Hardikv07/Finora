@@ -10,6 +10,7 @@ import CopilotPanel from '../copilot/CopilotPanel';
 
 /**
  * Main application layout wrapping responsive Sidebar, top Navbar, and dynamic page views
+ * Styled with pitch black background (#0a0a0c)
  */
 const MainLayout = ({ activeTab, onTabChange, globalSearchQuery, setGlobalSearchQuery, children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,7 +19,7 @@ const MainLayout = ({ activeTab, onTabChange, globalSearchQuery, setGlobalSearch
   const { toasts, removeToast } = useToast();
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans antialiased selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#0a0a0c] text-slate-100 font-sans antialiased selection:bg-[#d96b43] selection:text-white">
       {/* Toast notifications container */}
       <div className="fixed bottom-5 right-5 z-50 space-y-2 max-w-sm w-full pointer-events-none">
         {toasts.map((t) => (
@@ -42,7 +43,7 @@ const MainLayout = ({ activeTab, onTabChange, globalSearchQuery, setGlobalSearch
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:pl-64">
+        <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:pl-64 bg-[#0a0a0c]">
           {/* Top Navbar */}
           <Navbar
             activePage={activeTab}
@@ -56,7 +57,7 @@ const MainLayout = ({ activeTab, onTabChange, globalSearchQuery, setGlobalSearch
           />
 
           {/* Page Body Container */}
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 bg-[#0a0a0c]">
             {children}
           </main>
 

@@ -3,7 +3,7 @@
  * Includes: answer text, info cards, inline charts, follow-up chips, confidence badge
  */
 import React from 'react';
-import { Sparkles, User, TrendingUp, TrendingDown, Minus, Copy, Check } from 'lucide-react';
+import { Sparkles, User, TrendingUp, TrendingDown, Minus, Copy, Check, Receipt } from 'lucide-react';
 import { useState } from 'react';
 import CopilotChart from './CopilotChart';
 
@@ -136,6 +136,29 @@ const CopilotMessage = ({ message, onFollowUp }) => {
             <CopilotChart chart={chart} />
           </div>
         ))}
+
+        {/* RAG Matched Records */}
+        {message.sources?.length > 0 && (
+          <div className="mt-3">
+            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1.5 flex items-center gap-1">
+              <Receipt className="w-3 h-3 text-indigo-400" /> Matched Records ({message.sources.length})
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {message.sources.map((src, i) => (
+                <div key={i} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs">
+                  <div className="truncate mr-2">
+                    <span className="font-semibold text-slate-200">{src.merchant}</span>
+                    {src.category && <span className="text-[10px] text-slate-500 ml-1.5">({src.category})</span>}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={`font-bold ${src.type === 'INCOME' ? 'text-emerald-400' : src.type === 'PENDING' || src.type === 'OVERDUE' ? 'text-amber-400' : 'text-slate-200'}`}>{src.amount}</span>
+                    <span className="text-[10px] text-slate-500 block">{src.date}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Follow-up suggestions */}
         {message.followUps?.length > 0 && (

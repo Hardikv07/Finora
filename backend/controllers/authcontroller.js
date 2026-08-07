@@ -21,23 +21,34 @@ const registerUser = async (req, res) => {
         const email = req.body.email?.trim().toLowerCase();
         const password = req.body.password;
 
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: "Please provide all required fields (name, email, password)." });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ message: "Password must be at least 6 characters long." });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: "Please provide a valid email address." });
+        }
+
         // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
+            return res.status(400).json({ message: "A user with this email already exists." });
         }
 
         // Create new user
         const user = new User({ name, email, password });
         await user.save();
 
-        res.status(201).json({ message: "User registered successfully" });
+        res.status(201).json({ message: "User registered successfully." });
     } catch (error) {
-        console.error(error);
+        console.error("Register Error:", error);
         res.status(500).json({
-            message: "Error registering user",
-            error: error.message,
-            stack: error.stack
+            message: "An internal error occurred during registration. Please try again later."
         });
     }
 };
@@ -49,22 +60,28 @@ const login = async (req, res) => {
 
         if (!email || !password) {
             return res.status(400).json({
-                message: "Email and password are required"
+                message: "Please provide both email and password."
             });
         }
 
         const user = await User.findOne({ email });
 
         if (!user) {
-            return res.status(404).json({
-                message: "User not found"
+            return res.status(401).json({
+                message: "Invalid email or password."
+            });
+        }
+
+        if (user.isBlocked) {
+            return res.status(403).json({
+                message: "Your account has been blocked. Please contact support."
             });
         }
 
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
-            return res.status(400).json({
-                message: "Invalid credentials"
+            return res.status(401).json({
+                message: "Invalid email or password."
             });
         }
 

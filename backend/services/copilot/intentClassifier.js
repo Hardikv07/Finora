@@ -19,6 +19,7 @@ const INTENTS = {
   MONTHLY_REPORT: 'MONTHLY_REPORT',
   PREDICT_BALANCE: 'PREDICT_BALANCE',
   ANOMALY_DETECTION: 'ANOMALY_DETECTION',
+  SEARCH_TRANSACTIONS: 'SEARCH_TRANSACTIONS',
   GENERAL_FINANCE: 'GENERAL_FINANCE',
 };
 
@@ -145,6 +146,19 @@ const INTENT_PATTERNS = [
     ],
   },
   {
+    intent: INTENTS.SEARCH_TRANSACTIONS,
+    patterns: [
+      /find.*(transaction|payment|purchase|expense|receipt|spend|bill)/i,
+      /search.*(transaction|payment|purchase|expense|receipt)/i,
+      /show me.*(transaction|payment|purchase|order|expense)/i,
+      /when did i (pay|buy|purchase|spend)/i,
+      /how many times.*(bought|paid|spent|purchased)/i,
+      /all.*(transaction|payment|purchase).*(from|at|to|for)/i,
+      /did i (buy|pay|spend|purchase)/i,
+      /where is my (receipt|bill|payment)/i,
+    ],
+  },
+  {
     intent: INTENTS.MONTHLY_REPORT,
     patterns: [
       /monthly (report|summary|review)/i,
@@ -186,43 +200,10 @@ const extractEntities = (message) => {
 };
 
 /**
- * Classify intent using Gemini as fallback
+ * Local fallback for ambiguous messages (defaults to RAG search)
  */
 const classifyWithGemini = async (message) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return { intent: INTENTS.GENERAL_FINANCE, confidence: 50 };
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
-
-  const intentList = Object.values(INTENTS).join(', ');
-  const prompt = `You are a financial intent classifier. Classify this user message into exactly one of these intents: ${intentList}
-
-User message: "${message}"
-
-Return ONLY valid JSON:
-{"intent": "INTENT_NAME", "confidence": 0-100}`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json' },
-      }),
-    });
-
-    if (!response.ok) return { intent: INTENTS.GENERAL_FINANCE, confidence: 50 };
-
-    const result = await response.json();
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return { intent: INTENTS.GENERAL_FINANCE, confidence: 50 };
-
-    const parsed = JSON.parse(text.trim());
-    return { intent: parsed.intent || INTENTS.GENERAL_FINANCE, confidence: parsed.confidence || 70 };
-  } catch {
-    return { intent: INTENTS.GENERAL_FINANCE, confidence: 50 };
-  }
+  return { intent: INTENTS.SEARCH_TRANSACTIONS, confidence: 75 };
 };
 
 /**

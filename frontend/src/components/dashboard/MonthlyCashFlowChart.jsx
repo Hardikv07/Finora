@@ -3,147 +3,137 @@ import { BarChart2, TrendingUp, DollarSign } from 'lucide-react';
 import { INITIAL_ANALYTICS } from '../../constants/dummyData';
 import { useFinanceData } from '../../hooks/useFinanceData';
 import { formatCurrency } from '../../utils/formatters';
-import Card from '../common/Card';
 
 /**
- * 6-Month Income vs Expense Bar/Area Comparison Chart
+ * 6-Month Income vs Expense Bar/Area Comparison Chart in Dark Theme
  */
 const MonthlyCashFlowChart = () => {
   const { selectedCurrency } = useFinanceData();
-  const [activeTab, setActiveTab] = useState('comparison'); // 'comparison' | 'savings'
+  const [activeTab, setActiveTab] = useState('comparison');
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
   const data = INITIAL_ANALYTICS.monthlyComparison || [];
 
-  // Find max for scale
   const maxVal = Math.max(
     ...data.map((d) => Math.max(d.income || 0, d.expense || 0, d.savings || 0)),
     100000
   );
 
   return (
-    <Card
-      title="Monthly Cash Flow & Trends"
-      subtitle="Historical 6-month comparison of your revenue and expenditure"
-      actions={
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+    <div className="glass-card p-5">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4 border-b border-[#2e2e36]">
+        <div>
+          <h3 className="font-bold text-white text-base">Monthly Cash Flow & Trends</h3>
+          <p className="text-xs text-slate-400 font-medium">Historical 6-month comparison of your revenue and expenditure</p>
+        </div>
+
+        <div className="flex items-center bg-[#141416] p-1 rounded-xl text-xs font-semibold border border-[#2e2e36]">
           <button
             onClick={() => setActiveTab('comparison')}
-            className={`px-3 py-1 rounded-lg transition-all ${
-              activeTab === 'comparison' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              activeTab === 'comparison' ? 'bg-[#d96b43] text-white font-bold shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
             Income vs Expense
           </button>
           <button
             onClick={() => setActiveTab('savings')}
-            className={`px-3 py-1 rounded-lg transition-all ${
-              activeTab === 'savings' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              activeTab === 'savings' ? 'bg-[#86c8a7] text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
             }`}
           >
             Net Savings
           </button>
         </div>
-      }
-    >
-      <div className="pt-2">
+      </div>
+
+      <div className="pt-4">
         {/* Legend */}
         <div className="flex items-center justify-end gap-5 text-xs font-semibold mb-6">
           {activeTab === 'comparison' ? (
             <>
-              <span className="flex items-center gap-2 text-slate-700">
-                <span className="w-3 h-3 rounded-md bg-emerald-500 shadow-sm"></span>
+              <span className="flex items-center gap-2 text-slate-300">
+                <span className="w-3 h-3 rounded-md bg-[#86c8a7] shadow-sm"></span>
                 Total Income
               </span>
-              <span className="flex items-center gap-2 text-slate-700">
-                <span className="w-3 h-3 rounded-md bg-rose-500 shadow-sm"></span>
+              <span className="flex items-center gap-2 text-slate-300">
+                <span className="w-3 h-3 rounded-md bg-[#f87171] shadow-sm"></span>
                 Total Expense
               </span>
             </>
           ) : (
-            <span className="flex items-center gap-2 text-slate-700">
-              <span className="w-3 h-3 rounded-md bg-indigo-600 shadow-sm"></span>
-              Monthly Surplus / Net Savings
+            <span className="flex items-center gap-2 text-slate-300">
+              <span className="w-3 h-3 rounded-md bg-[#93b4ed] shadow-sm"></span>
+              Surplus Savings
             </span>
           )}
         </div>
 
-        {/* Bar Chart Grid Area */}
-        <div className="relative h-64 flex items-end justify-between gap-2 sm:gap-6 pt-8 pb-6 border-b border-slate-200">
-          {/* Horizontal Grid lines */}
-          <div className="absolute inset-x-0 top-0 border-t border-slate-100 border-dashed pointer-events-none" />
-          <div className="absolute inset-x-0 top-1/2 border-t border-slate-100 border-dashed pointer-events-none" />
-
+        {/* Bar Chart Container */}
+        <div className="h-64 flex items-end justify-between gap-2 sm:gap-6 px-2 sm:px-6 relative border-b border-[#2e2e36] pb-2">
           {data.map((item, idx) => {
-            const incomeHeight = Math.max(((item.income || 0) / maxVal) * 100, 4);
-            const expenseHeight = Math.max(((item.expense || 0) / maxVal) * 100, 4);
-            const savingsHeight = Math.max(((item.savings || 0) / maxVal) * 100, 4);
+            const incPct = Math.round((item.income / maxVal) * 100);
+            const expPct = Math.round((item.expense / maxVal) * 100);
+            const savPct = Math.round((item.savings / maxVal) * 100);
+
+            const isHovered = hoveredIndex === idx;
 
             return (
               <div
-                key={item.month}
+                key={idx}
+                className="flex-1 flex flex-col items-center h-full justify-end relative group cursor-pointer"
                 onMouseEnter={() => setHoveredIndex(idx)}
                 onMouseLeave={() => setHoveredIndex(null)}
-                className="flex-1 flex flex-col items-center h-full justify-end relative group cursor-pointer"
               >
                 {/* Tooltip on hover */}
-                {hoveredIndex === idx && (
-                  <div className="absolute -top-14 z-20 bg-slate-900 text-white p-2.5 rounded-xl shadow-xl text-xs font-medium whitespace-nowrap animate-fade-in pointer-events-none">
-                    <p className="font-bold border-b border-slate-700 pb-1 mb-1 text-slate-200">{item.month} 2026 Summary</p>
+                {isHovered && (
+                  <div className="absolute -top-14 z-20 bg-[#22222a] border border-[#383844] text-white p-2.5 rounded-xl shadow-xl text-xs font-medium whitespace-nowrap animate-fade-in pointer-events-none">
+                    <p className="font-bold text-[#ea9d85]">{item.month}</p>
                     {activeTab === 'comparison' ? (
-                      <>
-                        <p className="text-emerald-400">Income: {formatCurrency(item.income, selectedCurrency)}</p>
-                        <p className="text-rose-400">Expense: {formatCurrency(item.expense, selectedCurrency)}</p>
-                      </>
+                      <div className="space-y-0.5 mt-0.5">
+                        <p className="text-[#86c8a7]">Income: {formatCurrency(item.income, selectedCurrency)}</p>
+                        <p className="text-[#f87171]">Expense: {formatCurrency(item.expense, selectedCurrency)}</p>
+                      </div>
                     ) : (
-                      <p className="text-indigo-300">Net Savings: {formatCurrency(item.savings, selectedCurrency)}</p>
+                      <p className="text-[#93b4ed] mt-0.5">Savings: {formatCurrency(item.savings, selectedCurrency)}</p>
                     )}
                   </div>
                 )}
 
                 {/* Bars */}
-                <div className="w-full flex items-end justify-center gap-1 sm:gap-2 h-full max-w-[60px]">
+                <div className="w-full flex items-end justify-center gap-1.5 sm:gap-2 h-full">
                   {activeTab === 'comparison' ? (
                     <>
                       {/* Income Bar */}
                       <div
-                        style={{ height: `${incomeHeight}%` }}
-                        className="w-1/2 bg-gradient-to-t from-emerald-600 to-emerald-500 rounded-t-lg transition-all duration-500 group-hover:brightness-110 shadow-sm"
+                        className="w-1/2 max-w-[28px] bg-[#86c8a7] rounded-t-lg transition-all duration-500 group-hover:brightness-110 shadow-sm"
+                        style={{ height: `${incPct}%` }}
                       />
                       {/* Expense Bar */}
                       <div
-                        style={{ height: `${expenseHeight}%` }}
-                        className="w-1/2 bg-gradient-to-t from-rose-600 to-rose-500 rounded-t-lg transition-all duration-500 group-hover:brightness-110 shadow-sm"
+                        className="w-1/2 max-w-[28px] bg-[#f87171] rounded-t-lg transition-all duration-500 group-hover:brightness-110 shadow-sm"
+                        style={{ height: `${expPct}%` }}
                       />
                     </>
                   ) : (
                     /* Savings Bar */
                     <div
-                      style={{ height: `${savingsHeight}%` }}
-                      className="w-4/5 bg-gradient-to-t from-indigo-700 via-indigo-600 to-purple-600 rounded-t-xl transition-all duration-500 group-hover:brightness-110 shadow-md"
+                      className="w-full max-w-[40px] bg-[#93b4ed] rounded-t-lg transition-all duration-500 group-hover:brightness-110 shadow-sm"
+                      style={{ height: `${savPct}%` }}
                     />
                   )}
                 </div>
 
-                {/* X-axis label */}
-                <span className="text-xs font-bold text-slate-600 mt-3">{item.month}</span>
+                {/* Month Label */}
+                <span className="text-xs font-bold text-slate-400 mt-3 group-hover:text-white transition-colors">
+                  {item.month}
+                </span>
               </div>
             );
           })}
         </div>
-
-        {/* Quick Insight Footnote */}
-        <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-          <span className="flex items-center gap-1.5 font-medium">
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
-            Your income grew by <strong className="text-slate-800">32.2%</strong> from Feb to July.
-          </span>
-          <span className="font-mono text-[11px] bg-slate-100 px-2 py-1 rounded-md text-slate-600">
-            Avg: {formatCurrency(175000, selectedCurrency)}/mo
-          </span>
-        </div>
       </div>
-    </Card>
+    </div>
   );
 };
 

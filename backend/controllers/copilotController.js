@@ -1,22 +1,17 @@
 /**
- * Finora Copilot — Controller
+ * Finora Copilot — Controller (100% Local RAG & Deterministic Processing)
  *
  * POST /api/copilot/chat
- * Orchestrates: intent detection → data aggregation → prompt building → Gemini response
+ * Orchestrates: Intent Detection → Data Aggregation / RAG Search → Local Format
+ * Completely local — zero external Gemini API calls!
  */
 
 const { classifyIntent } = require('../services/copilot/intentClassifier');
 const { aggregateData } = require('../services/copilot/dataAggregator');
-const { buildPrompt } = require('../services/copilot/promptBuilder');
-const { generateCopilotResponse } = require('../services/copilot/geminiCopilot');
+const { buildLocalResponse } = require('../services/copilot/promptBuilder');
+const { askWithRAG } = require('../services/copilot/ragService');
 
-// ─── Startup Check ────────────────────────────────────────────────────────────
-// Warn at module load time — visible immediately when the server starts
-if (!process.env.GEMINI_API_KEY) {
-  console.error('[Copilot] ❌ CRITICAL: GEMINI_API_KEY is not set in .env. Copilot will return fallback responses.');
-} else {
-  console.log('[Copilot] ✅ GEMINI_API_KEY loaded successfully.');
-}
+console.log('[Copilot Engine] ✅ Running in 100% Local RAG Mode (Zero External LLM Dependency).');
 
 /**
  * POST /api/copilot/chat
@@ -38,22 +33,34 @@ const chat = async (req, res) => {
     }
 
     const trimmedMessage = message.trim();
-    const safeHistory = Array.isArray(history) ? history.slice(-8) : []; // Last 4 turns (8 messages)
+    const safeHistory = Array.isArray(history) ? history.slice(-8) : [];
 
-    console.log(`[Copilot] User: ${userId} | Message: "${trimmedMessage}"`);
+    console.log(`[Copilot] User: ${userId} | Question: "${trimmedMessage}"`);
 
-    // 2. Classify intent
+    // 2. Classify intent locally via regex
     const { intent, confidence: intentConfidence, entities } = await classifyIntent(trimmedMessage);
-    console.log(`[Copilot] Intent: ${intent} (${intentConfidence}%) | Entities:`, entities);
+    console.log(`[Copilot] Classified Intent: ${intent} (${intentConfidence}%) | Entities:`, entities);
 
-    // 3. Aggregate data from MongoDB (backend performs ALL calculations)
+    // 3. Multi-Entity RAG Pipeline (Transactions, Bills, Goals, Subscriptions)
+    const isMultiEntityQuery = /bill|due|unpaid|utility|goal|target|saving|subscription|recurring|find|search|show|when|how much|most expensive|largest|highest/i.test(trimmedMessage);
+    if (intent === 'SEARCH_TRANSACTIONS' || intent === 'GENERAL_FINANCE' || intent === 'TOP_TRANSACTION' || isMultiEntityQuery) {
+      console.log(`[Copilot RAG] Executing local database search for: "${trimmedMessage}"`);
+      const ragResult = await askWithRAG(userId, trimmedMessage, safeHistory);
+      return res.status(200).json({
+        ...ragResult,
+        intent,
+        processingMs: Date.now() - startTime
+      });
+    }
+
+    // 4. Structured Analytical Intents -> Local Aggregation + Response Builder
     let context;
     try {
       context = await aggregateData(intent, userId, entities);
     } catch (dbErr) {
       console.error('[Copilot] Data aggregation failed:', dbErr);
       return res.status(200).json({
-        answer: "I couldn't retrieve your financial data right now. Please ensure you have some transactions recorded and try again.",
+        answer: "Could not retrieve your financial data from database. Please ensure you have recorded transactions.",
         cards: [],
         charts: [],
         followUps: ['Add your first transaction', 'Set up a budget', 'Create a savings goal'],
@@ -63,53 +70,26 @@ const chat = async (req, res) => {
       });
     }
 
-    // 4. Build structured prompt (no raw transactions sent to Gemini)
-    const { systemPrompt, charts } = buildPrompt(intent, context, trimmedMessage, safeHistory);
+    // Build natural language answer & cards locally
+    const localResult = buildLocalResponse(intent, context, trimmedMessage);
 
-    // 5. Generate explanation via Gemini
-    let geminiResponse;
-    try {
-      console.log(`[Copilot] Step 5: Calling Gemini...`);
-      geminiResponse = await generateCopilotResponse(systemPrompt);
-      console.log(`[Copilot] Step 5: Gemini responded.`);
-    } catch (aiErr) {
-      // Log the FULL error so developers can see the real reason in server logs
-      console.error('[Copilot] ❌ Gemini call failed:', aiErr.message);
-
-      // Return a graceful fallback with the SPECIFIC error reason embedded
-      // so developers can diagnose from the frontend without checking logs
-      const isDev = process.env.NODE_ENV !== 'production';
-      return res.status(200).json({
-        answer: isDev
-          ? `AI engine error: ${aiErr.message}`
-          : buildFallbackAnswer(intent, context),
-        cards: buildFallbackCards(context),
-        charts,
-        followUps: ['Compare with last month', 'Show budget status', 'View my goals'],
-        confidence: 60,
-        intent,
-        processingMs: Date.now() - startTime,
-      });
-    }
-
-    // 6. Respond with structured data
     const processingMs = Date.now() - startTime;
-    console.log(`[Copilot] Responded in ${processingMs}ms`);
+    console.log(`[Copilot Local] Responded in ${processingMs}ms`);
 
     return res.status(200).json({
-      answer: geminiResponse.answer || 'I analyzed your finances but could not generate an explanation.',
-      cards: geminiResponse.cards || [],
-      charts,
-      followUps: geminiResponse.followUps || [],
-      highlights: geminiResponse.highlights || [],
-      confidence: geminiResponse.confidence || intentConfidence,
+      answer: localResult.answer,
+      cards: localResult.cards || [],
+      charts: localResult.charts || [],
+      followUps: localResult.followUps || [],
+      highlights: localResult.highlights || [],
+      confidence: localResult.confidence || intentConfidence,
       intent,
       processingMs,
     });
   } catch (err) {
     console.error('[Copilot] Unexpected error:', err);
     return res.status(500).json({
-      answer: 'Something went wrong. Please try again in a moment.',
+      answer: 'Something went wrong processing your request.',
       cards: [],
       charts: [],
       followUps: ['Try again', 'Ask a different question'],
@@ -117,34 +97,6 @@ const chat = async (req, res) => {
       intent: 'GENERAL_FINANCE',
     });
   }
-};
-
-// ─── Fallback helpers (when Gemini is unavailable) ───────────────────────────
-
-const buildFallbackAnswer = (intent, ctx) => {
-  const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
-  switch (intent) {
-    case 'AFFORDABILITY':
-      return ctx.canAfford
-        ? `Based on your current balance of ${fmt(ctx.totalBalance)}, you can afford this purchase. Your disposable income after upcoming bills is ${fmt(ctx.disposableIncome)}.`
-        : `Your current balance is ${fmt(ctx.totalBalance)}, but after accounting for upcoming bills (${fmt(ctx.upcomingBills)}), you may want to wait. Consider saving for ${ctx.monthsToSave || 'a few'} more months.`;
-    case 'GOAL_PROGRESS':
-      return ctx.goals?.length
-        ? `You have ${ctx.goals.length} active goal(s). Your top goal "${ctx.goals[0]?.title}" is ${ctx.goals[0]?.progress}% complete.`
-        : 'You have no active savings goals. Start one to track your financial targets!';
-    default:
-      return 'Your financial data has been analyzed. The AI explanation service is temporarily unavailable, but your numbers are shown in the cards below.';
-  }
-};
-
-const buildFallbackCards = (ctx) => {
-  if (!ctx) return [];
-  const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
-  const cards = [];
-  if (ctx.totalBalance !== undefined) cards.push({ label: 'Total Balance', value: fmt(ctx.totalBalance), color: 'indigo' });
-  if (ctx.monthlySavings !== undefined) cards.push({ label: 'Monthly Savings', value: fmt(ctx.monthlySavings), color: ctx.monthlySavings >= 0 ? 'emerald' : 'rose' });
-  if (ctx.totalNetWorth !== undefined) cards.push({ label: 'Net Worth', value: fmt(ctx.totalNetWorth), color: 'blue' });
-  return cards.slice(0, 4);
 };
 
 module.exports = { chat };

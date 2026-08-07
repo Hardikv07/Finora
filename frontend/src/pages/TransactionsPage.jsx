@@ -1,82 +1,87 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Filter, FileUp, Search, X } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Search, Filter, FileUp, X } from 'lucide-react';
 import { useFinanceData } from '../hooks/useFinanceData';
-import { useDebounce } from '../hooks/useDebounce';
-import Button from '../components/common/Button';
-import Pagination from '../components/common/Pagination';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants/categories';
 import TransactionTable from '../components/transactions/TransactionTable';
 import TransactionFormModal from '../components/transactions/TransactionFormModal';
+import Pagination from '../components/common/Pagination';
+import Button from '../components/common/Button';
 import BillImportModal from '../components/transactions/BillImportModal';
 
 /**
- * Transactions Page with search, filters, and sorting controls
+ * Financial Ledger & Transactions Page in crisp High-Contrast Dark Palette
  */
-const TransactionsPage = ({ defaultSearchQuery = '', onClearSearch }) => {
+const TransactionsPage = ({ defaultSearchQuery, onClearSearch }) => {
   const { transactions, deleteTransaction } = useFinanceData();
+
+  // Search & Filter state
   const [searchQuery, setSearchQuery] = useState(defaultSearchQuery || '');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'income' | 'expense'
   const [filterCategory, setFilterCategory] = useState('all');
+
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(8);
+  const itemsPerPage = 10;
+
+  // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [billImportOpen, setBillImportOpen] = useState(false);
 
-  const debouncedQuery = useDebounce(searchQuery, 250);
-
-  useEffect(() => {
-    if (defaultSearchQuery) {
+  // Synchronize when top navbar search selects a term
+  React.useEffect(() => {
+    if (defaultSearchQuery !== undefined && defaultSearchQuery !== searchQuery) {
       setSearchQuery(defaultSearchQuery);
-      setFilterType('all');
-      setFilterCategory('all');
       setCurrentPage(1);
     }
   }, [defaultSearchQuery]);
 
-  // Extract unique categories — scoped to the active type filter so dropdown stays relevant
-  const allCategories = useMemo(() => {
-    const source = filterType === 'all'
-      ? transactions
-      : transactions.filter((t) => t.type?.toLowerCase() === filterType);
-    const cats = new Set(source.map((t) => t.category).filter(Boolean));
-    return ['all', ...Array.from(cats).sort()];
-  }, [transactions, filterType]);
+  const debouncedQuery = searchQuery.trim().toLowerCase();
 
-  // Filter & Search Logic
+  // Combined categories list for filter dropdown
+  const allCategories = useMemo(() => {
+    return [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
+  }, []);
+
+  // Filter transactions
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
-      // Type matching — normalize to lowercase to handle both 'income' and 'INCOME'
-      const txType = tx.type?.toLowerCase();
-      if (filterType !== 'all' && txType !== filterType) return false;
+      // Type Filter
+      if (filterType !== 'all') {
+        const txType = tx.type?.toLowerCase();
+        if (txType !== filterType) return false;
+      }
 
-      // Category matching (case-insensitive)
-      if (filterCategory !== 'all' && tx.category?.toLowerCase() !== filterCategory.toLowerCase()) return false;
+      // Category Filter
+      if (filterCategory !== 'all' && tx.category !== filterCategory) {
+        return false;
+      }
 
-      // Search matching (merchant, category, notes, tags, amount)
+      // Search Query Filter across multiple fields
       if (debouncedQuery) {
-        const query = debouncedQuery.toLowerCase().trim();
-        const matchMerchant = tx.merchant?.toLowerCase().includes(query);
-        const matchCategory = tx.category?.toLowerCase().includes(query);
-        const matchNotes = tx.notes?.toLowerCase().includes(query);
-        // Only match amount when query is purely numeric to avoid false positives (e.g. "1" matching everything)
-        const isNumericQuery = /^\d+(\.\d+)?$/.test(query);
-        const matchAmount = isNumericQuery && tx.amount?.toString() === query;
-        const matchTags = Array.isArray(tx.tags)
-          ? tx.tags.some((t) => t.toLowerCase().includes(query))
-          : false;
+        const merchantMatch = (tx.merchant || '').toLowerCase().includes(debouncedQuery);
+        const categoryMatch = (tx.category || '').toLowerCase().includes(debouncedQuery);
+        const notesMatch = (tx.notes || '').toLowerCase().includes(debouncedQuery);
+        const amountMatch = (tx.amount || '').toString().includes(debouncedQuery);
 
-        return matchMerchant || matchCategory || matchNotes || matchTags || matchAmount;
+        const tags = Array.isArray(tx.tags) ? tx.tags : [];
+        const tagsMatch = tags.some((t) => (t || '').toLowerCase().includes(debouncedQuery));
+
+        if (!merchantMatch && !categoryMatch && !notesMatch && !amountMatch && !tagsMatch) {
+          return false;
+        }
       }
 
       return true;
     });
   }, [transactions, filterType, filterCategory, debouncedQuery]);
 
-  // Pagination slicing
+  // Paginated records
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / itemsPerPage));
   const paginatedTransactions = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredTransactions.slice(start, start + itemsPerPage);
-  }, [filteredTransactions, currentPage, itemsPerPage]);
+  }, [filteredTransactions, currentPage]);
 
   const handleOpenAdd = () => {
     setEditingTx(null);
@@ -88,14 +93,13 @@ const TransactionsPage = ({ defaultSearchQuery = '', onClearSearch }) => {
     setModalOpen(true);
   };
 
-
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Action Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-slate-900 tracking-tight">Financial Ledger</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Manage, filter, and search your transaction records</p>
+          <h2 className="text-2xl font-black text-white tracking-tight">Financial Ledger</h2>
+          <p className="text-xs text-slate-400 mt-0.5 font-medium">Manage, filter, and search your transaction records</p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -108,8 +112,8 @@ const TransactionsPage = ({ defaultSearchQuery = '', onClearSearch }) => {
         </div>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="relative z-10 bg-white border border-slate-200/80 shadow-card rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Filter Toolbar in High-Contrast Dark Surface */}
+      <div className="relative z-10 bg-[#19191d] border border-[#2e2e36] shadow-card rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="w-full md:w-80">
           <div className="relative flex items-center w-full">
             <Search className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none z-10" />
@@ -123,13 +127,13 @@ const TransactionsPage = ({ defaultSearchQuery = '', onClearSearch }) => {
               }}
               placeholder="Search merchants, categories, tags, amounts..."
               autoComplete="off"
-              className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 focus:bg-white transition-all shadow-sm"
+              className="w-full pl-10 pr-9 py-2.5 bg-[#141416] border border-[#2e2e36] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#d96b43]/30 focus:border-[#d96b43] transition-all shadow-sm"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setCurrentPage(1); if (onClearSearch) onClearSearch(); }}
-                className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors z-10"
+                className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-white hover:bg-[#282830] transition-colors z-10"
                 aria-label="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
@@ -140,24 +144,23 @@ const TransactionsPage = ({ defaultSearchQuery = '', onClearSearch }) => {
 
         {/* Type & Category Filter Chips */}
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
-          {/* Result count badge */}
           {(debouncedQuery || filterType !== 'all' || filterCategory !== 'all') && (
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#3b231c] text-[#ea9d85] border border-[#543025]">
               {filteredTransactions.length} result{filteredTransactions.length !== 1 ? 's' : ''}
             </span>
           )}
 
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+          <div className="flex items-center bg-[#141416] p-1 rounded-xl text-xs font-semibold border border-[#2e2e36]">
             {['all', 'income', 'expense'].map((t) => (
               <button
                 key={t}
                 onClick={() => {
                   setFilterType(t);
-                  setFilterCategory('all'); // BUG-05 fix: reset category when type changes
+                  setFilterCategory('all');
                   setCurrentPage(1);
                 }}
                 className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
-                  filterType === t ? 'bg-white text-indigo-600 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900'
+                  filterType === t ? 'bg-[#d96b43] text-white shadow-sm font-bold' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 {t}
@@ -173,56 +176,44 @@ const TransactionsPage = ({ defaultSearchQuery = '', onClearSearch }) => {
                 setFilterCategory(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer capitalize"
+              className="bg-[#141416] border border-[#2e2e36] text-xs font-semibold text-white py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#d96b43]/30 cursor-pointer"
             >
-              <option value="all">All Categories</option>
-              {allCategories.filter((c) => c !== 'all').map((cat, i) => (
-                <option key={i} value={cat}>
-                  {cat}
+              <option value="all" className="bg-[#141416] text-white">All Categories</option>
+              {allCategories.map((c) => (
+                <option key={c.id || c.name} value={c.name} className="bg-[#141416] text-white">
+                  {c.name}
                 </option>
               ))}
             </select>
           </div>
-
-          {/* Clear all filters button */}
-          {(debouncedQuery || filterType !== 'all' || filterCategory !== 'all') && (
-            <button
-              onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterCategory('all'); setCurrentPage(1); if (onClearSearch) onClearSearch(); }}
-              className="text-xs font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors border border-rose-100"
-            >
-              Clear all
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className="space-y-0">
-        <TransactionTable
-          transactions={paginatedTransactions}
-          onDelete={deleteTransaction}
-          onEdit={handleOpenEdit}
-          searchQuery={debouncedQuery}
-        />
+      {/* Main Transactions Data Table */}
+      <TransactionTable
+        transactions={paginatedTransactions}
+        onEdit={handleOpenEdit}
+        onDelete={deleteTransaction}
+        searchQuery={debouncedQuery}
+      />
+
+      {/* Pagination Bar */}
+      {totalPages > 1 && (
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredTransactions.length}
-          itemsPerPage={itemsPerPage}
+          totalPages={totalPages}
           onPageChange={setCurrentPage}
         />
-      </div>
+      )}
 
-      {/* Modal */}
+      {/* Add / Edit Transaction Modal */}
       <TransactionFormModal
         isOpen={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          setEditingTx(null);
-        }}
+        onClose={() => setModalOpen(false)}
         initialData={editingTx}
       />
 
-      {/* Bill Import Modal */}
+      {/* Bill OCR Import Modal */}
       <BillImportModal
         isOpen={billImportOpen}
         onClose={() => setBillImportOpen(false)}
